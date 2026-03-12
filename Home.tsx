@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { login } from '../services/api';
 
 interface LoginScreenProps {
   onLoginSuccess: () => void;
@@ -25,18 +26,30 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    if (!email || !password) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos');
-      return;
-    }
-    
+const handleLogin = async () => {
+  if (!email || !password) {
+    Alert.alert('Erro', 'Por favor, preencha todos os campos');
+    return;
+  }
+
+  try {
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+
+    const result = await login(email, password);
+
+    setIsLoading(false);
+
+    if (result.token) {
       onLoginSuccess();
-    }, 2000);
-  };
+    } else {
+      Alert.alert('Erro', 'Email ou senha inválidos');
+    }
+
+  } catch (error) {
+    setIsLoading(false);
+    Alert.alert('Erro', 'Não foi possível conectar ao servidor');
+  }
+};
 
   const handleForgotPasswordPress = () => {
     onForgotPassword();
