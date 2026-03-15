@@ -65,7 +65,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
 
     // Mostrar tela de listagem de idosos
     if (currentPage === 'elderly') {
-        return <ElderlyListScreen onBack={() => setCurrentPage('home')} />;
+        return (
+            <ElderlyListScreen
+                onBack={() => setCurrentPage('home')}
+                onNavigateTab={(tab) => setCurrentPage(tab as NavigationPage)}
+                activeTab={currentPage}
+            />
+        );
     }
 
     return (
