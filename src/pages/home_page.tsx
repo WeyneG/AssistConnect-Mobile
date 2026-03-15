@@ -12,12 +12,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { buscarIdosos, buscarResumo, Idoso, ResumoIdosos } from '../services/api';
+import { ElderlyListScreen } from './elderly_list';
 
 interface HomePageProps {
     onLogout: () => void;
 }
 
+type NavigationPage = 'home' | 'elderly' | 'agenda' | 'alerts' | 'profile';
+
 export const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
+    const [currentPage, setCurrentPage] = useState<NavigationPage>('home');
     const [idosos, setIdosos] = useState<Idoso[]>([]);
     const [resumo, setResumo] = useState<ResumoIdosos | null>(null);
     const [loading, setLoading] = useState(true);
@@ -58,6 +62,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
     const handleVerDetalhes = (idoso: Idoso) => {
         Alert.alert('Detalhes', `Visualizar detalhes de ${idoso.nome}`);
     };
+
+    // Mostrar tela de listagem de idosos
+    if (currentPage === 'elderly') {
+        return <ElderlyListScreen onBack={() => setCurrentPage('home')} />;
+    }
 
     return (
         <View style={styles.container}>
@@ -198,26 +207,48 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
 
             {/* Bottom Navigation */}
             <View style={styles.bottomNav}>
-                <TouchableOpacity style={styles.navItem}>
-                    <View style={styles.navItemActive}>
+                <TouchableOpacity
+                    style={styles.navItem}
+                    onPress={() => setCurrentPage('home')}
+                >
+                    {currentPage === 'home' && <View style={styles.navItemActive}>
                         <Ionicons name="home" size={22} color="#8297D9" />
-                    </View>
-                    <Text style={styles.navItemTextActive}>Home</Text>
+                    </View>}
+                    {currentPage !== 'home' && <Ionicons name="home-outline" size={22} color="#9CA3AF" />}
+                    <Text style={currentPage === 'home' ? styles.navItemTextActive : styles.navItemText}>Home</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.navItem}>
-                    <Ionicons name="calendar-outline" size={22} color="#9CA3AF" />
-                    <Text style={styles.navItemText}>Agenda</Text>
+                <TouchableOpacity
+                    style={styles.navItem}
+                    onPress={() => setCurrentPage('elderly')}
+                >
+                    {currentPage === 'elderly' && <View style={styles.navItemActive}>
+                        <Ionicons name="people" size={22} color="#8297D9" />
+                    </View>}
+                    {currentPage !== 'elderly' && <Ionicons name="people-outline" size={22} color="#9CA3AF" />}
+                    <Text style={currentPage === 'elderly' ? styles.navItemTextActive : styles.navItemText}>Idosos</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.navItem}>
-                    <Ionicons name="notifications-outline" size={22} color="#9CA3AF" />
-                    <Text style={styles.navItemText}>Alertas</Text>
+                <TouchableOpacity
+                    style={styles.navItem}
+                    onPress={() => setCurrentPage('alerts')}
+                >
+                    {currentPage === 'alerts' && <View style={styles.navItemActive}>
+                        <Ionicons name="notifications" size={22} color="#8297D9" />
+                    </View>}
+                    {currentPage !== 'alerts' && <Ionicons name="notifications-outline" size={22} color="#9CA3AF" />}
+                    <Text style={currentPage === 'alerts' ? styles.navItemTextActive : styles.navItemText}>Alertas</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.navItem}>
-                    <Ionicons name="person-outline" size={22} color="#9CA3AF" />
-                    <Text style={styles.navItemText}>Perfil</Text>
+                <TouchableOpacity
+                    style={styles.navItem}
+                    onPress={() => setCurrentPage('profile')}
+                >
+                    {currentPage === 'profile' && <View style={styles.navItemActive}>
+                        <Ionicons name="person" size={22} color="#8297D9" />
+                    </View>}
+                    {currentPage !== 'profile' && <Ionicons name="person-outline" size={22} color="#9CA3AF" />}
+                    <Text style={currentPage === 'profile' ? styles.navItemTextActive : styles.navItemText}>Perfil</Text>
                 </TouchableOpacity>
             </View>
         </View>
