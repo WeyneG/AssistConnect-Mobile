@@ -15,3 +15,19 @@ export async function login(email: string, password: string) {
   const data = await response.json();
   return data;
 }
+
+export async function getIdosos(token: string) {
+  const response = await fetch(`${API_URL}/idosos`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Erro ao buscar idosos");
+  }
+
+  return await response.json();
+}

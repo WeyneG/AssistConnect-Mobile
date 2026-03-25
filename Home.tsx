@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { login } from './services/api';
 
 interface LoginScreenProps {
-  onLoginSuccess: () => void;
+  onLoginSuccess: (token: string) => void;
   onForgotPassword: () => void;
   onSignUp: () => void;
 }
@@ -40,7 +40,7 @@ const handleLogin = async () => {
     setIsLoading(false);
 
     if (result.token) {
-      onLoginSuccess();
+      onLoginSuccess(result.token);
     } else {
       Alert.alert('Erro', 'Email ou senha inválidos');
     }

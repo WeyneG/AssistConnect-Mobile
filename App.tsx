@@ -9,8 +9,10 @@ type Screen = 'login' | 'forgotPassword' | 'signUp' | 'home';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
+  const [userToken, setUserToken] = useState<string | null>(null);
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = (token: string) => {
+    setUserToken(token);
     setCurrentScreen('home');
   };
 
@@ -23,6 +25,7 @@ export default function App() {
   };
 
   const handleBackToLogin = () => {
+    setUserToken(null);
     setCurrentScreen('login');
   };
 
@@ -60,7 +63,7 @@ export default function App() {
   // Home Screen (após login)
   return (
     <>
-      <HomeScreen onLogout={handleBackToLogin} />
+      <HomeScreen onLogout={handleBackToLogin} token={userToken || ''} />
       <StatusBar style="dark" />
     </>
   );
