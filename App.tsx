@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { LoginScreen } from './Home';
 import { ForgotPasswordScreen } from './ForgotPassword';
 import { SignUpScreen } from './SignUp';
-import { HomeScreen } from './HomeScreen';
+import { HomePage } from './src/pages/home_page';
 
 type Screen = 'login' | 'forgotPassword' | 'signUp' | 'home';
 
@@ -50,7 +50,7 @@ export default function App() {
   if (currentScreen === 'login') {
     return (
       <>
-        <LoginScreen 
+        <LoginScreen
           onLoginSuccess={handleLoginSuccess}
           onForgotPassword={handleForgotPassword}
           onSignUp={handleSignUp}
