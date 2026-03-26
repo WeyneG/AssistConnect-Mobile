@@ -4,26 +4,23 @@ import { LoginScreen } from './Home';
 import { ForgotPasswordScreen } from './ForgotPassword';
 import { SignUpScreen } from './SignUp';
 import { HomePage } from './src/pages/home_page';
+import { PerfilIdosoPage } from './src/pages/perfil_idoso_page';
 
-type Screen = 'login' | 'forgotPassword' | 'signUp' | 'home';
+type Screen = 'login' | 'forgotPassword' | 'signUp' | 'home' | 'perfilIdoso';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
+  const [idosoSelecionadoId, setIdosoSelecionadoId] = useState<number | null>(null);
 
-  const handleLoginSuccess = () => {
-    setCurrentScreen('home');
-  };
+  const handleLoginSuccess = () => setCurrentScreen('home');
+  const handleForgotPassword = () => setCurrentScreen('forgotPassword');
+  const handleSignUp = () => setCurrentScreen('signUp');
+  const handleBackToLogin = () => setCurrentScreen('login');
+  const handleBackToHome = () => setCurrentScreen('home');
 
-  const handleForgotPassword = () => {
-    setCurrentScreen('forgotPassword');
-  };
-
-  const handleSignUp = () => {
-    setCurrentScreen('signUp');
-  };
-
-  const handleBackToLogin = () => {
-    setCurrentScreen('login');
+  const handleVerPerfil = (idosoId: number) => {
+    setIdosoSelecionadoId(idosoId);
+    setCurrentScreen('perfilIdoso');
   };
 
   if (currentScreen === 'forgotPassword') {
@@ -44,6 +41,15 @@ export default function App() {
     );
   }
 
+  if (currentScreen === 'perfilIdoso' && idosoSelecionadoId !== null) {
+    return (
+      <>
+        <PerfilIdosoPage idosoId={idosoSelecionadoId} onBack={handleBackToHome} />
+        <StatusBar style="light" />
+      </>
+    );
+  }
+
   if (currentScreen === 'login') {
     return (
       <>
@@ -57,10 +63,9 @@ export default function App() {
     );
   }
 
-  // Home Screen (após login)
   return (
     <>
-      <HomePage onLogout={handleBackToLogin} />
+      <HomePage onLogout={handleBackToLogin} onVerPerfil={handleVerPerfil} />
       <StatusBar style="dark" />
     </>
   );

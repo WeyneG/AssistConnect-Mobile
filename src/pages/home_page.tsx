@@ -15,9 +15,10 @@ import { buscarIdosos, buscarResumo, Idoso, ResumoIdosos } from '../services/api
 
 interface HomePageProps {
     onLogout: () => void;
+    onVerPerfil: (idosoId: number) => void;
 }
 
-export const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
+export const HomePage: React.FC<HomePageProps> = ({ onLogout, onVerPerfil }) => {
     const [idosos, setIdosos] = useState<Idoso[]>([]);
     const [resumo, setResumo] = useState<ResumoIdosos | null>(null);
     const [loading, setLoading] = useState(true);
@@ -56,7 +57,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
     };
 
     const handleVerDetalhes = (idoso: Idoso) => {
-        Alert.alert('Detalhes', `Visualizar detalhes de ${idoso.nome}`);
+        onVerPerfil(idoso.id);
     };
 
     return (
