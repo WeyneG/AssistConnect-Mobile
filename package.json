@@ -6,7 +6,20 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "jest --runInBand"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "moduleNameMapper": {
+      "@ungap/structured-clone": "<rootDir>/__mocks__/expo-runtime.js",
+      "^expo/src/winter$": "<rootDir>/__mocks__/expo-runtime.js",
+      "^expo/src/winter/ImportMetaRegistry$": "<rootDir>/__mocks__/expo-runtime.js",
+      "^expo/src/utils/getBundleUrl$": "<rootDir>/__mocks__/expo-runtime.js"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg)"
+    ]
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -19,7 +32,12 @@
     "react-native-web": "^0.21.0"
   },
   "devDependencies": {
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.2.10",
+    "jest": "^30.3.0",
+    "jest-expo": "^55.0.11",
     "typescript": "^5.3.3"
   },
   "private": true
