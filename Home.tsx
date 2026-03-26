@@ -12,9 +12,10 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { login } from './services/api';
 
 interface LoginScreenProps {
-  onLoginSuccess: () => void;
+  onLoginSuccess: (token: string) => void;
   onForgotPassword: () => void;
   onSignUp: () => void;
 }
@@ -25,17 +26,37 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    if (!email || !password) {
-      Alert.alert('Atenção', 'Por favor, preencha todos os campos');
-      return;
+const handleLogin = async () => {
+  if (!email || !password) {
+    Alert.alert('Erro', 'Por favor, preencha todos os campos');
+    return;
+  }
+
+  try {
+    setIsLoading(true);
+
+    const result = await login(email, password);
+
+    setIsLoading(false);
+
+    if (result.token) {
+      onLoginSuccess(result.token);
+    } else {
+      Alert.alert('Erro', 'Email ou senha inválidos');
     }
 
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      onLoginSuccess();
-    }, 1500);
+  } catch (error) {
+    setIsLoading(false);
+    Alert.alert('Erro', 'Não foi possível conectar ao servidor');
+  }
+};
+
+  const handleForgotPasswordPress = () => {
+    onForgotPassword();
+  };
+
+  const handleSignUpPress = () => {
+    onSignUp();
   };
 
   return (
