@@ -10,12 +10,20 @@ type Screen = 'login' | 'forgotPassword' | 'signUp' | 'home' | 'perfilIdoso';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
+  const [userToken, setUserToken] = useState<string | null>(null);
   const [idosoSelecionadoId, setIdosoSelecionadoId] = useState<number | null>(null);
 
-  const handleLoginSuccess = () => setCurrentScreen('home');
+  const handleLoginSuccess = (token: string) => {
+    setUserToken(token);
+    setCurrentScreen('home');
+  };
+
   const handleForgotPassword = () => setCurrentScreen('forgotPassword');
   const handleSignUp = () => setCurrentScreen('signUp');
-  const handleBackToLogin = () => setCurrentScreen('login');
+  const handleBackToLogin = () => {
+    setUserToken(null);
+    setCurrentScreen('login');
+  };
   const handleBackToHome = () => setCurrentScreen('home');
 
   const handleVerPerfil = (idosoId: number) => {
