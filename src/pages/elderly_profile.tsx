@@ -197,12 +197,12 @@ export const ElderlyProfileScreen: React.FC<ElderlyProfileProps> = ({ idosoId, o
                 <TouchableOpacity
                     style={styles.navItem}
                     onPress={() => {
-                        onBack(); // Volta para lista de idosos
-                        onNavigateTab?.('alerts'); // Depois navega para alerts
+                        onBack();
+                        onNavigateTab?.('agenda');
                     }}
                 >
-                    <Ionicons name="notifications-outline" size={22} color="#9CA3AF" />
-                    <Text style={styles.navItemText}>Alertas</Text>
+                    <Ionicons name="calendar-outline" size={22} color="#9CA3AF" />
+                    <Text style={styles.navItemText}>Agenda</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity

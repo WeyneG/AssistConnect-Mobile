@@ -26,37 +26,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-const handleLogin = async () => {
-  if (!email || !password) {
-    Alert.alert('Erro', 'Por favor, preencha todos os campos');
-    return;
-  }
-
-  try {
-    setIsLoading(true);
-
-    const result = await login(email, password);
-
-    setIsLoading(false);
-
-    if (result.token) {
-      onLoginSuccess(result.token);
-    } else {
-      Alert.alert('Erro', 'Email ou senha inválidos');
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Erro', 'Por favor, preencha todos os campos');
+      return;
     }
 
-  } catch (error) {
-    setIsLoading(false);
-    Alert.alert('Erro', 'Não foi possível conectar ao servidor');
-  }
-};
+    try {
+      setIsLoading(true);
 
-  const handleForgotPasswordPress = () => {
-    onForgotPassword();
-  };
+      const result = await login(email, password);
 
-  const handleSignUpPress = () => {
-    onSignUp();
+      setIsLoading(false);
+
+      if (result.token) {
+        onLoginSuccess(result.token);
+      } else {
+        Alert.alert('Erro', 'Email ou senha inválidos');
+      }
+
+    } catch (error) {
+      setIsLoading(false);
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor');
+    }
   };
 
   return (

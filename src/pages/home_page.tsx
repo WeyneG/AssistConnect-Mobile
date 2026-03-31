@@ -20,7 +20,7 @@ interface HomePageProps {
     onVerPerfil: (idosoId: number) => void;
 }
 
-type NavigationPage = 'home' | 'elderly' | 'agenda' | 'alerts' | 'profile';
+type NavigationPage = 'home' | 'elderly' | 'agenda' | 'profile';
 
 export const HomePage: React.FC<HomePageProps> = ({ onLogout, onVerPerfil }) => {
     const [currentPage, setCurrentPage] = useState<NavigationPage>('home');

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { buscarIdosos, Idoso } from '../services/api';
-import { ElderlyProfileScreen } from './elderly_profile';
+import { PerfilIdosoPage } from './perfil_idoso_page';
 
 interface ElderlyListProps {
     onBack: () => void;
@@ -26,30 +26,28 @@ type ViewMode = 'list' | 'profile';
 export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNavigateTab, activeTab = 'elderly' }) => {
     const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [selectedIdosoId, setSelectedIdosoId] = useState<number | null>(null);
-    
+
     // Listagem
     const [todosIdosos, setTodosIdosos] = useState<Idoso[]>([]);
     const [idosos, setIdosos] = useState<Idoso[]>([]);
     const [filteredIdosos, setFilteredIdosos] = useState<Idoso[]>([]);
-    
+
     // Paginação
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize] = useState(5);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-    
+
     // Estados
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    
+
     // Busca com debounce
     const [searchText, setSearchText] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [filterStatus, setFilterStatus] = useState<'todos' | 'ativo' | 'inativo'>('todos');
-    const [filterRoom, setFilterRoom] = useState<string>('todos');
-    const [availableRooms, setAvailableRooms] = useState<string[]>([]);
 
     // Debounce na busca (300ms)
     useEffect(() => {
@@ -68,10 +66,10 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
         };
     }, [searchText]);
 
-    // Filtrar quando a busca com debounce, status ou quarto muda
+    // Filtrar quando a busca com debounce, status muda
     useEffect(() => {
         filtrarIdosos();
-    }, [debouncedSearch, filterStatus, filterRoom, idosos]);
+    }, [debouncedSearch, filterStatus, idosos]);
 
     // Carregar primeira página
     useEffect(() => {
@@ -83,15 +81,11 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
             setError(null);
             setLoading(true);
             setCurrentPage(1);
-            
+
             const idososData = await buscarIdosos(1, pageSize);
             setIdosos(idososData);
             setTodosIdosos(idososData);
             setHasMore(idososData.length === pageSize);
-            
-            // Extrair quartos únicos e ordenar
-            const quartos = Array.from(new Set(idososData.map(i => i.quarto))).sort();
-            setAvailableRooms(quartos);
         } catch (err) {
             const mensagemErro = err instanceof Error ? err.message : 'Erro desconhecido';
             setError(mensagemErro);
@@ -108,7 +102,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
             setLoadingMore(true);
             const nextPage = currentPage + 1;
             const novosDados = await buscarIdosos(nextPage, pageSize);
-            
+
             if (novosDados.length === 0) {
                 setHasMore(false);
             } else {
@@ -131,11 +125,6 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
         // Filtrar por status
         if (filterStatus !== 'todos') {
             resultado = resultado.filter(idoso => idoso.status === filterStatus);
-        }
-
-        // Filtrar por quarto
-        if (filterRoom !== 'todos') {
-            resultado = resultado.filter(idoso => idoso.quarto === filterRoom);
         }
 
         // Filtrar por busca
@@ -167,11 +156,9 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
     // Tela de perfil
     if (viewMode === 'profile' && selectedIdosoId) {
         return (
-            <ElderlyProfileScreen
+            <PerfilIdosoPage
                 idosoId={selectedIdosoId}
                 onBack={handleBackFromProfile}
-                onNavigateTab={onNavigateTab}
-                activeTab={activeTab}
             />
         );
     }
@@ -258,8 +245,6 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
 
                 {/* Status Filter Label */}
                 <Text style={styles.filterLabel}>Status</Text>
-
-                {/* Filter Tabs */}
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -330,63 +315,6 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
                     </TouchableOpacity>
                 </ScrollView>
 
-                {/* Room Filter Label */}
-                {availableRooms.length > 0 && (
-                    <Text style={styles.filterLabel}>Ala/Quarto</Text>
-                )}
-
-                {/* Filter Rooms */}
-                {availableRooms.length > 0 && (
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        style={styles.filterTabs}
-                        contentContainerStyle={styles.filterTabsContent}
-                    >
-                        <TouchableOpacity
-                            style={[
-                                styles.filterTab,
-                                filterRoom === 'todos' && styles.filterTabActive
-                            ]}
-                            onPress={() => setFilterRoom('todos')}
-                        >
-                            <Text
-                                style={[
-                                    styles.filterTabText,
-                                    filterRoom === 'todos' && styles.filterTabTextActive
-                                ]}
-                            >
-                                Todos os quartos
-                            </Text>
-                        </TouchableOpacity>
-
-                        {availableRooms.map(room => (
-                            <TouchableOpacity
-                                key={room}
-                                style={[
-                                    styles.filterTab,
-                                    filterRoom === room && styles.filterTabActive
-                                ]}
-                                onPress={() => setFilterRoom(room)}
-                            >
-                                <Ionicons
-                                    name="home-outline"
-                                    size={14}
-                                    color={filterRoom === room ? '#FFFFFF' : '#9CA3AF'}
-                                    style={{ marginRight: 4 }}
-                                />
-                                <Text
-                                    style={[
-                                        styles.filterTabText,
-                                        filterRoom === room && styles.filterTabTextActive
-                                    ]}
-                                >
-                                    Qto {room}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                )}
             </View>
 
             <FlatList
@@ -517,11 +445,11 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
                     style={styles.navItem}
                     onPress={() => {
                         onBack();
-                        onNavigateTab?.('alerts');
+                        onNavigateTab?.('agenda');
                     }}
                 >
-                    <Ionicons name="notifications-outline" size={22} color="#9CA3AF" />
-                    <Text style={styles.navItemText}>Alertas</Text>
+                    <Ionicons name="calendar-outline" size={22} color="#9CA3AF" />
+                    <Text style={styles.navItemText}>Agenda</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity

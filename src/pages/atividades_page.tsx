@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    ActivityIndicator, RefreshControl, FlatList,
+    View, Text, StyleSheet, TouchableOpacity, Modal, Pressable,
+    ActivityIndicator, RefreshControl, FlatList, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -12,11 +12,11 @@ import {
 interface AtividadesPageProps {
     onNavigateTab?: (tab: string) => void;
     activeTab?: string;
-    // Filtros persistidos entre navegações
     filtrosIniciais?: FiltrosAtividade;
     onFiltrosChange?: (filtros: FiltrosAtividade) => void;
 }
 
+const TIPO_
 // ─── Configurações visuais por tipo e status ─────────────────────────────────
 
 const TIPO_CONFIG: Record<TipoAtividade, { label: string; icon: string; cor: string; bg: string }> = {
