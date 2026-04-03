@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { buscarIdosos, Idoso } from '../services/api';
 import { ElderlyProfileScreen } from './elderly_profile';
+import { BottomTabBar } from '../components/BottomTabBar';
 
 interface ElderlyListProps {
     onBack: () => void;
@@ -490,51 +491,19 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
                 scrollIndicatorInsets={{ right: 1 }}
             />
 
-            {/* Bottom Navigation */}
-            <View style={styles.bottomNav}>
-                <TouchableOpacity
-                    style={styles.navItem}
-                    onPress={() => {
-                        onBack();
-                        onNavigateTab?.('home');
-                    }}
-                >
-                    <Ionicons name="home-outline" size={22} color="#9CA3AF" />
-                    <Text style={styles.navItemText}>Home</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.navItem}
-                >
-                    {activeTab === 'elderly' && <View style={styles.navItemActive}>
-                        <Ionicons name="people" size={22} color="#8297D9" />
-                    </View>}
-                    {activeTab !== 'elderly' && <Ionicons name="people-outline" size={22} color="#9CA3AF" />}
-                    <Text style={activeTab === 'elderly' ? styles.navItemTextActive : styles.navItemText}>Idosos</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.navItem}
-                    onPress={() => {
-                        onBack();
-                        onNavigateTab?.('alerts');
-                    }}
-                >
-                    <Ionicons name="notifications-outline" size={22} color="#9CA3AF" />
-                    <Text style={styles.navItemText}>Alertas</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.navItem}
-                    onPress={() => {
-                        onBack();
-                        onNavigateTab?.('profile');
-                    }}
-                >
-                    <Ionicons name="person-outline" size={22} color="#9CA3AF" />
-                    <Text style={styles.navItemText}>Perfil</Text>
-                </TouchableOpacity>
-            </View>
+            <BottomTabBar
+                activeTab={activeTab}
+                onTabPress={(tab) => {
+                    onBack();
+                    onNavigateTab?.(tab);
+                }}
+                tabs={[
+                    { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
+                    { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
+                    { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
+                    { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
+                ]}
+            />
         </View>
     );
 };
@@ -832,37 +801,5 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#6B7280',
         fontWeight: '500',
-    },
-    bottomNav: {
-        flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
-        paddingVertical: 12,
-        paddingHorizontal: 8,
-        paddingBottom: 24,
-        borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-    },
-    navItem: {
-        flex: 1,
-        alignItems: 'center',
-        gap: 4,
-    },
-    navItemActive: {
-        backgroundColor: '#EEF2FF',
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    navItemText: {
-        fontSize: 11,
-        color: '#9CA3AF',
-        fontWeight: '500',
-    },
-    navItemTextActive: {
-        fontSize: 11,
-        color: '#8297D9',
-        fontWeight: '600',
     },
 });

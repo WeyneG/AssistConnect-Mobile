@@ -15,6 +15,13 @@ export default function App() {
 
   const handleLoginSuccess = (token: string) => {
     setUserToken(token);
+    setIdosoSelecionadoId(null);
+    setCurrentScreen('home');
+  };
+
+  const handleDemoAccess = () => {
+    setUserToken(null);
+    setIdosoSelecionadoId(null);
     setCurrentScreen('home');
   };
 
@@ -22,6 +29,7 @@ export default function App() {
   const handleSignUp = () => setCurrentScreen('signUp');
   const handleBackToLogin = () => {
     setUserToken(null);
+    setIdosoSelecionadoId(null);
     setCurrentScreen('login');
   };
   const handleBackToHome = () => setCurrentScreen('home');
@@ -65,6 +73,7 @@ export default function App() {
           onLoginSuccess={handleLoginSuccess}
           onForgotPassword={handleForgotPassword}
           onSignUp={handleSignUp}
+          onDemoAccess={handleDemoAccess}
         />
         <StatusBar style="dark" />
       </>
