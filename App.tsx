@@ -4,8 +4,15 @@ import { LoginScreen } from './Home';
 import { ForgotPasswordScreen } from './ForgotPassword';
 import { SignUpScreen } from './SignUp';
 import { HomePage } from './src/pages/home_page';
+<<<<<<< Updated upstream
 
 type Screen = 'login' | 'forgotPassword' | 'signUp' | 'home';
+=======
+import { PerfilIdosoPage } from './src/pages/perfil_idoso_page';
+import { ActivitiesPage } from './src/pages/activities_page';
+
+type Screen = 'login' | 'forgotPassword' | 'signUp' | 'home' | 'perfilIdoso' | 'activities';
+>>>>>>> Stashed changes
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
@@ -44,6 +51,27 @@ export default function App() {
     );
   }
 
+<<<<<<< Updated upstream
+=======
+  if (currentScreen === 'perfilIdoso' && idosoSelecionadoId !== null) {
+    return (
+      <>
+        <PerfilIdosoPage idosoId={idosoSelecionadoId} onBack={handleBackToHome} />
+        <StatusBar style="light" />
+      </>
+    );
+  }
+
+  if (currentScreen === 'activities') {
+    return (
+      <>
+        <ActivitiesPage onBack={handleBackToHome} />
+        <StatusBar style="light" />
+      </>
+    );
+  }
+
+>>>>>>> Stashed changes
   if (currentScreen === 'login') {
     return (
       <>

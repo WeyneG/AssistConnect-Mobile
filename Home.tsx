@@ -25,6 +25,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+<<<<<<< Updated upstream
   const handleLogin = () => {
     if (!email || !password) {
       Alert.alert('Atenção', 'Por favor, preencha todos os campos');
@@ -36,6 +37,42 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
       setIsLoading(false);
       onLoginSuccess();
     }, 1500);
+=======
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Erro', 'Por favor, preencha todos os campos');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const result = await login(email, password);
+
+      if (result.token) {
+        onLoginSuccess(result.token);
+        return;
+      }
+
+      Alert.alert('Erro', 'Email ou senha inválidos');
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTestLogin = () => {
+    onLoginSuccess('test-token');
+  };
+
+  const handleForgotPasswordPress = () => {
+    onForgotPassword();
+  };
+
+  const handleSignUpPress = () => {
+    onSignUp();
+>>>>>>> Stashed changes
   };
 
   return (
@@ -129,6 +166,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
                 <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
               </>
             )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.testLoginButton}
+            onPress={handleTestLogin}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="play-circle-outline" size={20} color="#8297D9" />
+            <Text style={styles.testLoginButtonText}>Entrar sem backend</Text>
           </TouchableOpacity>
         </View>
 
@@ -278,6 +324,23 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  testLoginButton: {
+    flexDirection: 'row',
+    marginTop: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#8297D9',
+  },
+  testLoginButtonText: {
+    color: '#8297D9',
     fontSize: 16,
     fontWeight: '600',
   },

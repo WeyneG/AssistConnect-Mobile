@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { buscarIdosos, buscarResumo, Idoso, ResumoIdosos } from '../services/api';
 import { ElderlyListScreen } from './elderly_list';
+import { ActivitiesPage } from './activities_page';
 
 interface HomePageProps {
     onLogout: () => void;
@@ -67,6 +68,17 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
     if (currentPage === 'elderly') {
         return (
             <ElderlyListScreen
+                onBack={() => setCurrentPage('home')}
+                onNavigateTab={(tab) => setCurrentPage(tab as NavigationPage)}
+                activeTab={currentPage}
+            />
+        );
+    }
+
+    // Mostrar tela de agenda/atividades
+    if (currentPage === 'agenda') {
+        return (
+            <ActivitiesPage
                 onBack={() => setCurrentPage('home')}
                 onNavigateTab={(tab) => setCurrentPage(tab as NavigationPage)}
                 activeTab={currentPage}
@@ -235,6 +247,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
                     <Text style={currentPage === 'elderly' ? styles.navItemTextActive : styles.navItemText}>Idosos</Text>
                 </TouchableOpacity>
 
+<<<<<<< Updated upstream
                 <TouchableOpacity
                     style={styles.navItem}
                     onPress={() => setCurrentPage('alerts')}
@@ -243,6 +256,21 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout }) => {
                         <Ionicons name="notifications" size={22} color="#8297D9" />
                     </View>}
                     {currentPage !== 'alerts' && <Ionicons name="notifications-outline" size={22} color="#9CA3AF" />}
+=======
+                <TouchableOpacity style={styles.navItem} onPress={() => setCurrentPage('agenda')}>
+                    {currentPage === 'agenda'
+                        ? <View style={styles.navItemActive}><Ionicons name="calendar" size={22} color="#8297D9" /></View>
+                        : <Ionicons name="calendar-outline" size={22} color="#9CA3AF" />
+                    }
+                    <Text style={currentPage === 'agenda' ? styles.navItemTextActive : styles.navItemText}>Agenda</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.navItem} onPress={() => setCurrentPage('alerts')}>
+                    {currentPage === 'alerts'
+                        ? <View style={styles.navItemActive}><Ionicons name="notifications" size={22} color="#8297D9" /></View>
+                        : <Ionicons name="notifications-outline" size={22} color="#9CA3AF" />
+                    }
+>>>>>>> Stashed changes
                     <Text style={currentPage === 'alerts' ? styles.navItemTextActive : styles.navItemText}>Alertas</Text>
                 </TouchableOpacity>
 
