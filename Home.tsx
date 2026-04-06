@@ -18,9 +18,10 @@ interface LoginScreenProps {
   onLoginSuccess: (token: string) => void;
   onForgotPassword: () => void;
   onSignUp: () => void;
+  onDemoAccess?: () => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForgotPassword, onSignUp }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForgotPassword, onSignUp, onDemoAccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -50,6 +51,15 @@ const handleLogin = async () => {
     Alert.alert('Erro', 'Não foi possível conectar ao servidor');
   }
 };
+
+  const handleDemoAccess = () => {
+    if (onDemoAccess) {
+      onDemoAccess();
+      return;
+    }
+
+    onLoginSuccess('demo-token');
+  };
 
   const handleForgotPasswordPress = () => {
     onForgotPassword();
@@ -150,6 +160,15 @@ const handleLogin = async () => {
                 <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
               </>
             )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.demoButton}
+            onPress={handleDemoAccess}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="play-circle-outline" size={18} color="#8297D9" />
+            <Text style={styles.demoButtonText}>Entrar sem backend</Text>
           </TouchableOpacity>
         </View>
 
@@ -301,6 +320,23 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  demoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 12,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    backgroundColor: '#FFFFFF',
+  },
+  demoButtonText: {
+    color: '#8297D9',
+    fontSize: 15,
+    fontWeight: '700',
   },
   signUpContainer: {
     flexDirection: 'row',

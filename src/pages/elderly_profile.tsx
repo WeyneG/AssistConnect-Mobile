@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { buscarIdosoDetalhes, Idoso } from '../services/api';
+import { BottomTabBar } from '../components/BottomTabBar';
 
 interface ElderlyProfileProps {
     idosoId: number;
@@ -172,50 +173,19 @@ export const ElderlyProfileScreen: React.FC<ElderlyProfileProps> = ({ idosoId, o
             </ScrollView>
 
             {/* Bottom Navigation */}
-            <View style={styles.bottomNav}>
-                <TouchableOpacity
-                    style={styles.navItem}
-                    onPress={() => {
-                        onBack(); // Volta para lista de idosos
-                        onNavigateTab?.('home'); // Depois navega para home
-                    }}
-                >
-                    <Ionicons name="home-outline" size={22} color="#9CA3AF" />
-                    <Text style={styles.navItemText}>Home</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.navItem}
-                >
-                    {activeTab === 'elderly' && <View style={styles.navItemActive}>
-                        <Ionicons name="people" size={22} color="#8297D9" />
-                    </View>}
-                    {activeTab !== 'elderly' && <Ionicons name="people-outline" size={22} color="#9CA3AF" />}
-                    <Text style={activeTab === 'elderly' ? styles.navItemTextActive : styles.navItemText}>Idosos</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.navItem}
-                    onPress={() => {
-                        onBack(); // Volta para lista de idosos
-                        onNavigateTab?.('alerts'); // Depois navega para alerts
-                    }}
-                >
-                    <Ionicons name="notifications-outline" size={22} color="#9CA3AF" />
-                    <Text style={styles.navItemText}>Alertas</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.navItem}
-                    onPress={() => {
-                        onBack(); // Volta para lista de idosos
-                        onNavigateTab?.('profile'); // Depois navega para perfil
-                    }}
-                >
-                    <Ionicons name="person-outline" size={22} color="#9CA3AF" />
-                    <Text style={styles.navItemText}>Perfil</Text>
-                </TouchableOpacity>
-            </View>
+            <BottomTabBar
+                activeTab={activeTab}
+                onTabPress={(tab) => {
+                    onBack();
+                    onNavigateTab?.(tab);
+                }}
+                tabs={[
+                    { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
+                    { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
+                    { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
+                    { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
+                ]}
+            />
         </View>
     );
 };
@@ -416,37 +386,5 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#8297D9',
         marginLeft: 12,
-    },
-    bottomNav: {
-        flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
-        paddingVertical: 12,
-        paddingHorizontal: 8,
-        paddingBottom: 24,
-        borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-    },
-    navItem: {
-        flex: 1,
-        alignItems: 'center',
-        gap: 4,
-    },
-    navItemActive: {
-        backgroundColor: '#EEF2FF',
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    navItemText: {
-        fontSize: 11,
-        color: '#9CA3AF',
-        fontWeight: '500',
-    },
-    navItemTextActive: {
-        fontSize: 11,
-        color: '#8297D9',
-        fontWeight: '600',
     },
 });
