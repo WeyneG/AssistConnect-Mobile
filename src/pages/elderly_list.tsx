@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { buscarIdosos, Idoso } from '../services/api';
-import { PerfilIdosoPage } from './perfil_idoso_page';
+import { ElderlyProfileScreen } from './elderly_profile';
+import { BottomTabBar } from '../components/BottomTabBar';
 
 interface ElderlyListProps {
     onBack: () => void;
@@ -26,28 +27,30 @@ type ViewMode = 'list' | 'profile';
 export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNavigateTab, activeTab = 'elderly' }) => {
     const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [selectedIdosoId, setSelectedIdosoId] = useState<number | null>(null);
-
+    
     // Listagem
     const [todosIdosos, setTodosIdosos] = useState<Idoso[]>([]);
     const [idosos, setIdosos] = useState<Idoso[]>([]);
     const [filteredIdosos, setFilteredIdosos] = useState<Idoso[]>([]);
-
+    
     // Paginação
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize] = useState(5);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-
+    
     // Estados
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
+    
     // Busca com debounce
     const [searchText, setSearchText] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [filterStatus, setFilterStatus] = useState<'todos' | 'ativo' | 'inativo'>('todos');
+    const [filterRoom, setFilterRoom] = useState<string>('todos');
+    const [availableRooms, setAvailableRooms] = useState<string[]>([]);
 
     // Debounce na busca (300ms)
     useEffect(() => {
@@ -66,10 +69,10 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
         };
     }, [searchText]);
 
-    // Filtrar quando a busca com debounce, status muda
+    // Filtrar quando a busca com debounce, status ou quarto muda
     useEffect(() => {
         filtrarIdosos();
-    }, [debouncedSearch, filterStatus, idosos]);
+    }, [debouncedSearch, filterStatus, filterRoom, idosos]);
 
     // Carregar primeira página
     useEffect(() => {
@@ -81,11 +84,15 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
             setError(null);
             setLoading(true);
             setCurrentPage(1);
-
+            
             const idososData = await buscarIdosos(1, pageSize);
             setIdosos(idososData);
             setTodosIdosos(idososData);
             setHasMore(idososData.length === pageSize);
+            
+            // Extrair quartos únicos e ordenar
+            const quartos = Array.from(new Set(idososData.map(i => i.quarto))).sort();
+            setAvailableRooms(quartos);
         } catch (err) {
             const mensagemErro = err instanceof Error ? err.message : 'Erro desconhecido';
             setError(mensagemErro);
@@ -102,7 +109,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
             setLoadingMore(true);
             const nextPage = currentPage + 1;
             const novosDados = await buscarIdosos(nextPage, pageSize);
-
+            
             if (novosDados.length === 0) {
                 setHasMore(false);
             } else {
@@ -125,6 +132,11 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
         // Filtrar por status
         if (filterStatus !== 'todos') {
             resultado = resultado.filter(idoso => idoso.status === filterStatus);
+        }
+
+        // Filtrar por quarto
+        if (filterRoom !== 'todos') {
+            resultado = resultado.filter(idoso => idoso.quarto === filterRoom);
         }
 
         // Filtrar por busca
@@ -156,9 +168,11 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
     // Tela de perfil
     if (viewMode === 'profile' && selectedIdosoId) {
         return (
-            <PerfilIdosoPage
+            <ElderlyProfileScreen
                 idosoId={selectedIdosoId}
                 onBack={handleBackFromProfile}
+                onNavigateTab={onNavigateTab}
+                activeTab={activeTab}
             />
         );
     }
@@ -245,6 +259,8 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
 
                 {/* Status Filter Label */}
                 <Text style={styles.filterLabel}>Status</Text>
+
+                {/* Filter Tabs */}
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -315,6 +331,63 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
                     </TouchableOpacity>
                 </ScrollView>
 
+                {/* Room Filter Label */}
+                {availableRooms.length > 0 && (
+                    <Text style={styles.filterLabel}>Ala/Quarto</Text>
+                )}
+
+                {/* Filter Rooms */}
+                {availableRooms.length > 0 && (
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.filterTabs}
+                        contentContainerStyle={styles.filterTabsContent}
+                    >
+                        <TouchableOpacity
+                            style={[
+                                styles.filterTab,
+                                filterRoom === 'todos' && styles.filterTabActive
+                            ]}
+                            onPress={() => setFilterRoom('todos')}
+                        >
+                            <Text
+                                style={[
+                                    styles.filterTabText,
+                                    filterRoom === 'todos' && styles.filterTabTextActive
+                                ]}
+                            >
+                                Todos os quartos
+                            </Text>
+                        </TouchableOpacity>
+
+                        {availableRooms.map(room => (
+                            <TouchableOpacity
+                                key={room}
+                                style={[
+                                    styles.filterTab,
+                                    filterRoom === room && styles.filterTabActive
+                                ]}
+                                onPress={() => setFilterRoom(room)}
+                            >
+                                <Ionicons
+                                    name="home-outline"
+                                    size={14}
+                                    color={filterRoom === room ? '#FFFFFF' : '#9CA3AF'}
+                                    style={{ marginRight: 4 }}
+                                />
+                                <Text
+                                    style={[
+                                        styles.filterTabText,
+                                        filterRoom === room && styles.filterTabTextActive
+                                    ]}
+                                >
+                                    Qto {room}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                )}
             </View>
 
             <FlatList
@@ -418,51 +491,19 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
                 scrollIndicatorInsets={{ right: 1 }}
             />
 
-            {/* Bottom Navigation */}
-            <View style={styles.bottomNav}>
-                <TouchableOpacity
-                    style={styles.navItem}
-                    onPress={() => {
-                        onBack();
-                        onNavigateTab?.('home');
-                    }}
-                >
-                    <Ionicons name="home-outline" size={22} color="#9CA3AF" />
-                    <Text style={styles.navItemText}>Home</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.navItem}
-                >
-                    {activeTab === 'elderly' && <View style={styles.navItemActive}>
-                        <Ionicons name="people" size={22} color="#8297D9" />
-                    </View>}
-                    {activeTab !== 'elderly' && <Ionicons name="people-outline" size={22} color="#9CA3AF" />}
-                    <Text style={activeTab === 'elderly' ? styles.navItemTextActive : styles.navItemText}>Idosos</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.navItem}
-                    onPress={() => {
-                        onBack();
-                        onNavigateTab?.('agenda');
-                    }}
-                >
-                    <Ionicons name="calendar-outline" size={22} color="#9CA3AF" />
-                    <Text style={styles.navItemText}>Agenda</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.navItem}
-                    onPress={() => {
-                        onBack();
-                        onNavigateTab?.('profile');
-                    }}
-                >
-                    <Ionicons name="person-outline" size={22} color="#9CA3AF" />
-                    <Text style={styles.navItemText}>Perfil</Text>
-                </TouchableOpacity>
-            </View>
+            <BottomTabBar
+                activeTab={activeTab}
+                onTabPress={(tab) => {
+                    onBack();
+                    onNavigateTab?.(tab);
+                }}
+                tabs={[
+                    { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
+                    { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
+                    { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
+                    { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
+                ]}
+            />
         </View>
     );
 };
@@ -760,37 +801,5 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#6B7280',
         fontWeight: '500',
-    },
-    bottomNav: {
-        flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
-        paddingVertical: 12,
-        paddingHorizontal: 8,
-        paddingBottom: 24,
-        borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-    },
-    navItem: {
-        flex: 1,
-        alignItems: 'center',
-        gap: 4,
-    },
-    navItemActive: {
-        backgroundColor: '#EEF2FF',
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    navItemText: {
-        fontSize: 11,
-        color: '#9CA3AF',
-        fontWeight: '500',
-    },
-    navItemTextActive: {
-        fontSize: 11,
-        color: '#8297D9',
-        fontWeight: '600',
     },
 });

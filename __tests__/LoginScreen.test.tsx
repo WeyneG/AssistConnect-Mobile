@@ -24,6 +24,7 @@ const defaultProps = {
     onLoginSuccess: jest.fn(),
     onForgotPassword: jest.fn(),
     onSignUp: jest.fn(),
+    onDemoAccess: jest.fn(),
 };
 
 describe('LoginScreen', () => {
@@ -54,6 +55,11 @@ describe('LoginScreen', () => {
         it('deve renderizar o botão Entrar', () => {
             const { getByText } = render(<LoginScreen {...defaultProps} />);
             expect(getByText('Entrar')).toBeTruthy();
+        });
+
+        it('deve renderizar o botão de acesso demo', () => {
+            const { getByText } = render(<LoginScreen {...defaultProps} />);
+            expect(getByText('Entrar sem backend')).toBeTruthy();
         });
 
         it('deve renderizar o link "Esqueceu a senha?"', () => {
@@ -250,6 +256,12 @@ describe('LoginScreen', () => {
             const { getByText } = render(<LoginScreen {...defaultProps} />);
             fireEvent.press(getByText('Criar conta'));
             expect(defaultProps.onSignUp).toHaveBeenCalledTimes(1);
+        });
+
+        it('deve chamar onDemoAccess ao clicar em "Entrar sem backend"', () => {
+            const { getByText } = render(<LoginScreen {...defaultProps} />);
+            fireEvent.press(getByText('Entrar sem backend'));
+            expect(defaultProps.onDemoAccess).toHaveBeenCalledTimes(1);
         });
     });
 });

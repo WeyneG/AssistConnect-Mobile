@@ -11,16 +11,16 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { buscarIdosos, buscarResumo, Idoso, ResumoIdosos } from '../services/api';
+import { BottomTabBar } from '../components/BottomTabBar';
 import { ElderlyListScreen } from './elderly_list';
-import { AtividadesPage } from './atividades_page';
-import { FiltrosAtividade } from '../services/api';
+import { AgendaPage } from './agenda_page';
 
 interface HomePageProps {
     onLogout: () => void;
     onVerPerfil: (idosoId: number) => void;
 }
 
-type NavigationPage = 'home' | 'elderly' | 'agenda' | 'profile';
+type NavigationPage = 'home' | 'elderly' | 'agenda' | 'alerts' | 'profile';
 
 export const HomePage: React.FC<HomePageProps> = ({ onLogout, onVerPerfil }) => {
     const [currentPage, setCurrentPage] = useState<NavigationPage>('home');
@@ -29,8 +29,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout, onVerPerfil }) => 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    // Persistência dos filtros de atividades entre navegações
-    const [filtrosAtividades, setFiltrosAtividades] = useState<FiltrosAtividade>({});
 
     useEffect(() => {
         carregarDados();
@@ -72,18 +70,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout, onVerPerfil }) => 
         );
     }
 
-    // Mostrar tela de atividades
-    if (currentPage === 'agenda') {
-        return (
-            <AtividadesPage
-                onNavigateTab={(tab) => setCurrentPage(tab as NavigationPage)}
-                activeTab={currentPage}
-                filtrosIniciais={filtrosAtividades}
-                onFiltrosChange={setFiltrosAtividades}
-            />
-        );
-    }
-
     return (
         <View style={styles.container}>
             {/* Header */}
@@ -106,7 +92,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout, onVerPerfil }) => 
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8297D9']} tintColor="#8297D9" />
                 }
             >
-                {loading ? (
+                {currentPage === 'agenda' ? (
+                    <AgendaPage />
+                ) : loading ? (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color="#8297D9" />
                         <Text style={styles.loadingText}>Carregando...</Text>
@@ -150,6 +138,19 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout, onVerPerfil }) => 
                                 </View>
                             </View>
                         )}
+
+                        <TouchableOpacity style={styles.agendaCard} onPress={() => setCurrentPage('agenda')} activeOpacity={0.8}>
+                            <View style={styles.agendaCardLeft}>
+                                <View style={styles.agendaCardIcon}>
+                                    <Ionicons name="calendar" size={22} color="#8297D9" />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.agendaCardTitle}>Agenda do dia</Text>
+                                    <Text style={styles.agendaCardSubtitle}>Abra atividades por período, veja os detalhes e edite sem sair da tela.</Text>
+                                </View>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+                        </TouchableOpacity>
 
                         {/* Lista de Idosos */}
                         <View style={styles.section}>
@@ -213,44 +214,22 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout, onVerPerfil }) => 
             </ScrollView>
 
             {/* Floating Action Button */}
-            <TouchableOpacity style={styles.fab}>
-                <Ionicons name="add" size={28} color="#FFFFFF" />
-            </TouchableOpacity>
-
-            {/* Bottom Navigation */}
-            <View style={styles.bottomNav}>
-                <TouchableOpacity style={styles.navItem} onPress={() => setCurrentPage('home')}>
-                    {currentPage === 'home'
-                        ? <View style={styles.navItemActive}><Ionicons name="home" size={22} color="#8297D9" /></View>
-                        : <Ionicons name="home-outline" size={22} color="#9CA3AF" />
-                    }
-                    <Text style={currentPage === 'home' ? styles.navItemTextActive : styles.navItemText}>Home</Text>
+            {currentPage !== 'agenda' && (
+                <TouchableOpacity style={styles.fab} onPress={() => setCurrentPage('agenda')}>
+                    <Ionicons name="add" size={28} color="#FFFFFF" />
                 </TouchableOpacity>
+            )}
 
-                <TouchableOpacity style={styles.navItem} onPress={() => setCurrentPage('elderly')}>
-                    {currentPage === 'elderly'
-                        ? <View style={styles.navItemActive}><Ionicons name="people" size={22} color="#8297D9" /></View>
-                        : <Ionicons name="people-outline" size={22} color="#9CA3AF" />
-                    }
-                    <Text style={currentPage === 'elderly' ? styles.navItemTextActive : styles.navItemText}>Idosos</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.navItem} onPress={() => setCurrentPage('agenda')}>
-                    {currentPage === 'agenda'
-                        ? <View style={styles.navItemActive}><Ionicons name="calendar" size={22} color="#8297D9" /></View>
-                        : <Ionicons name="calendar-outline" size={22} color="#9CA3AF" />
-                    }
-                    <Text style={currentPage === 'agenda' ? styles.navItemTextActive : styles.navItemText}>Agenda</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.navItem} onPress={() => setCurrentPage('profile')}>
-                    {currentPage === 'profile'
-                        ? <View style={styles.navItemActive}><Ionicons name="person" size={22} color="#8297D9" /></View>
-                        : <Ionicons name="person-outline" size={22} color="#9CA3AF" />
-                    }
-                    <Text style={currentPage === 'profile' ? styles.navItemTextActive : styles.navItemText}>Perfil</Text>
-                </TouchableOpacity>
-            </View>
+            <BottomTabBar
+                activeTab={currentPage}
+                onTabPress={(tab) => setCurrentPage(tab as NavigationPage)}
+                tabs={[
+                    { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
+                    { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
+                    { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
+                    { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
+                ]}
+            />
         </View>
     );
 };
@@ -290,6 +269,32 @@ const styles = StyleSheet.create({
     statIconContainer: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
     statNumber: { fontSize: 28, fontWeight: '700', color: '#1F2937', marginBottom: 4 },
     statLabel: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
+    agendaCard: {
+        marginHorizontal: 20,
+        marginTop: 18,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 18,
+        padding: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    agendaCardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
+    agendaCardIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: '#EEF2FF',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    agendaCardTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 4 },
+    agendaCardSubtitle: { fontSize: 13, color: '#6B7280', lineHeight: 18 },
     section: { paddingHorizontal: 20, marginTop: 32 },
     sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     sectionTitle: { fontSize: 20, fontWeight: '700', color: '#1F2937', letterSpacing: -0.3 },
@@ -323,9 +328,4 @@ const styles = StyleSheet.create({
         backgroundColor: '#8297D9', alignItems: 'center', justifyContent: 'center',
         shadowColor: '#8297D9', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
     },
-    bottomNav: { flexDirection: 'row', backgroundColor: '#FFFFFF', paddingVertical: 12, paddingHorizontal: 8, paddingBottom: 24, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
-    navItem: { flex: 1, alignItems: 'center', gap: 4 },
-    navItemActive: { backgroundColor: '#EEF2FF', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-    navItemText: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
-    navItemTextActive: { fontSize: 11, color: '#8297D9', fontWeight: '600' },
 });
