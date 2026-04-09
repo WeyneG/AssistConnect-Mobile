@@ -127,6 +127,67 @@ export const buscarIdosoDetalhes = async (id: number): Promise<Idoso | null> => 
     }
 };
 
+// ─── Atividades ───────────────────────────────────────────────────────────────
+
+export type TipoAtividade = 'medicacao' | 'fisioterapia' | 'consulta' | 'lazer' | 'alimentacao' | 'higiene';
+export type StatusAtividade = 'pendente' | 'concluida' | 'cancelada';
+
+export interface Atividade {
+    id: number;
+    idosoId: number;
+    nomeIdoso: string;
+    titulo: string;
+    tipo: TipoAtividade;
+    status: StatusAtividade;
+    data: string;       // ISO date string
+    horario: string;    // HH:mm
+    descricao?: string;
+    responsavel?: string;
+}
+
+export interface FiltrosAtividade {
+    idosoId?: number;
+    tipo?: TipoAtividade;
+    status?: StatusAtividade;
+}
+
+const allAtividades: Atividade[] = [
+    { id: 1, idosoId: 1, nomeIdoso: 'Sr. Carlos Silva', titulo: 'Medicação matinal', tipo: 'medicacao', status: 'concluida', data: '2025-03-31', horario: '08:00', descricao: 'Metformina 500mg + Losartana 50mg', responsavel: 'Enf. Maria' },
+    { id: 2, idosoId: 1, nomeIdoso: 'Sr. Carlos Silva', titulo: 'Fisioterapia', tipo: 'fisioterapia', status: 'pendente', data: '2025-03-31', horario: '10:00', descricao: 'Exercícios de mobilidade', responsavel: 'Fisio. João' },
+    { id: 3, idosoId: 2, nomeIdoso: 'Sra. Ana Santos', titulo: 'Café da manhã', tipo: 'alimentacao', status: 'concluida', data: '2025-03-31', horario: '07:30', descricao: 'Dieta pastosa', responsavel: 'Aux. Paula' },
+    { id: 4, idosoId: 2, nomeIdoso: 'Sra. Ana Santos', titulo: 'Consulta neurológica', tipo: 'consulta', status: 'pendente', data: '2025-03-31', horario: '14:00', descricao: 'Acompanhamento Alzheimer', responsavel: 'Dr. Souza' },
+    { id: 5, idosoId: 3, nomeIdoso: 'Sr. João Pereira', titulo: 'Banho e higiene', tipo: 'higiene', status: 'concluida', data: '2025-03-31', horario: '09:00', responsavel: 'Aux. Carlos' },
+    { id: 6, idosoId: 3, nomeIdoso: 'Sr. João Pereira', titulo: 'Medicação Parkinson', tipo: 'medicacao', status: 'pendente', data: '2025-03-31', horario: '12:00', descricao: 'Levodopa 250mg', responsavel: 'Enf. Maria' },
+    { id: 7, idosoId: 4, nomeIdoso: 'Sra. Maria Costa', titulo: 'Atividade recreativa', tipo: 'lazer', status: 'cancelada', data: '2025-03-31', horario: '15:00', descricao: 'Jogo de cartas', responsavel: 'Rec. Ana' },
+    { id: 8, idosoId: 4, nomeIdoso: 'Sra. Maria Costa', titulo: 'Medicação cardíaca', tipo: 'medicacao', status: 'concluida', data: '2025-03-31', horario: '08:00', descricao: 'Digoxina 0.25mg', responsavel: 'Enf. Maria' },
+    { id: 9, idosoId: 5, nomeIdoso: 'Sr. Pedro Alves', titulo: 'Almoço', tipo: 'alimentacao', status: 'pendente', data: '2025-03-31', horario: '12:00', descricao: 'Dieta sem açúcar', responsavel: 'Aux. Paula' },
+    { id: 10, idosoId: 5, nomeIdoso: 'Sr. Pedro Alves', titulo: 'Fisioterapia', tipo: 'fisioterapia', status: 'pendente', data: '2025-03-31', horario: '16:00', descricao: 'Exercícios de equilíbrio', responsavel: 'Fisio. João' },
+    { id: 11, idosoId: 1, nomeIdoso: 'Sr. Carlos Silva', titulo: 'Medicação noturna', tipo: 'medicacao', status: 'pendente', data: '2025-03-31', horario: '20:00', descricao: 'Metformina 500mg', responsavel: 'Enf. Roberto' },
+    { id: 12, idosoId: 2, nomeIdoso: 'Sra. Ana Santos', titulo: 'Atividade cognitiva', tipo: 'lazer', status: 'pendente', data: '2025-03-31', horario: '16:00', descricao: 'Exercícios de memória', responsavel: 'Rec. Ana' },
+];
+
+export const buscarAtividades = async (filtros?: FiltrosAtividade): Promise<Atividade[]> => {
+    try {
+        await new Promise(resolve => setTimeout(resolve, 600));
+
+        // const params = new URLSearchParams();
+        // if (filtros?.idosoId) params.append('idosoId', String(filtros.idosoId));
+        // if (filtros?.tipo) params.append('tipo', filtros.tipo);
+        // if (filtros?.status) params.append('status', filtros.status);
+        // const response = await fetch(`${API_BASE_URL}/atividades?${params}`);
+        // if (!response.ok) throw new Error('Erro ao buscar atividades');
+        // return await response.json();
+
+        let resultado = allAtividades;
+        if (filtros?.idosoId) resultado = resultado.filter(a => a.idosoId === filtros.idosoId);
+        if (filtros?.tipo) resultado = resultado.filter(a => a.tipo === filtros.tipo);
+        if (filtros?.status) resultado = resultado.filter(a => a.status === filtros.status);
+        return resultado;
+    } catch (error) {
+        throw new Error('Falha ao carregar atividades');
+    }
+};
+
 export const buscarResumo = async (): Promise<ResumoIdosos> => {
     try {
         await new Promise(resolve => setTimeout(resolve, 1000));

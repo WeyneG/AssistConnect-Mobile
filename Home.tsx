@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -43,12 +43,12 @@ const handleLogin = async () => {
     if (result.token) {
       onLoginSuccess(result.token);
     } else {
-      Alert.alert('Erro', 'Email ou senha inválidos');
+      Alert.alert('Erro', 'Email ou senha inv├ílidos');
     }
 
   } catch (error) {
     setIsLoading(false);
-    Alert.alert('Erro', 'Não foi possível conectar ao servidor');
+    Alert.alert('Erro', 'N├úo foi poss├¡vel conectar ao servidor');
   }
 };
 
@@ -120,7 +120,7 @@ const handleLogin = async () => {
               <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, styles.passwordInput]}
-                placeholder="••••••••"
+                placeholder="ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó"
                 placeholderTextColor="#9CA3AF"
                 value={password}
                 onChangeText={setPassword}
@@ -174,7 +174,7 @@ const handleLogin = async () => {
 
         {/* Sign Up Link */}
         <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Não tem uma conta? </Text>
+          <Text style={styles.signUpText}>N├úo tem uma conta? </Text>
           <TouchableOpacity onPress={onSignUp}>
             <Text style={styles.signUpLink}>Criar conta</Text>
           </TouchableOpacity>

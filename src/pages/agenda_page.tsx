@@ -1,11 +1,7 @@
-import React, { useState } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
-    TextInput,
-    ScrollView,
+    View, Text, StyleSheet, TouchableOpacity,
+    TextInput, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -26,6 +22,8 @@ interface Activity {
     responsible: string;
 }
 
+// ─── Metadados visuais ────────────────────────────────────────────────────────
+
 const periodos: Periodo[] = ['manhã', 'tarde', 'noite'];
 
 const periodMeta: Record<Periodo, { label: string; icon: React.ComponentProps<typeof Ionicons>['name']; color: string; backgroundColor: string }> = {
@@ -41,36 +39,33 @@ const statusMeta: Record<ActivityStatus, { label: string; color: string; backgro
     atrasada: { label: 'Atrasada', color: '#DC2626', backgroundColor: '#FEE2E2' },
 };
 
-const dateKey = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+// ─── Helpers de data ──────────────────────────────────────────────────────────
 
-    return `${year}-${month}-${day}`;
+const dateKey = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 };
 
 const shiftDate = (date: Date, offset: number) => {
-    const nextDate = new Date(date);
-    nextDate.setDate(nextDate.getDate() + offset);
-    return nextDate;
+    const next = new Date(date);
+    next.setDate(next.getDate() + offset);
+    return next;
 };
 
 const formatDayLabel = (date: Date) => {
     const weekday = date.toLocaleDateString('pt-BR', { weekday: 'long' });
-    const formatted = date.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-    });
-
+    const formatted = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
     return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} • ${formatted}`;
 };
+
+// ─── Dados demo ───────────────────────────────────────────────────────────────
 
 const createDemoActivities = (): Activity[] => {
     const today = new Date();
     const tomorrow = shiftDate(today, 1);
     const yesterday = shiftDate(today, -1);
-
     return [
         { id: 1, date: dateKey(today), period: 'manhã', time: '08:00', title: 'Medicação da manhã', resident: 'Sr. Carlos Silva', status: 'pendente', location: 'Quarto 12', notes: 'Administrar após o café da manhã e registrar reação.', responsible: 'Marina' },
         { id: 2, date: dateKey(today), period: 'manhã', time: '10:30', title: 'Higiene assistida', resident: 'Sra. Ana Santos', status: 'em_andamento', location: 'Banheiro assistido', notes: 'Acompanhar com calma e revisar itens de higiene.', responsible: 'Lucas' },
@@ -82,6 +77,29 @@ const createDemoActivities = (): Activity[] => {
     ];
 };
 
+// ─── Chip de filtro ativo ─────────────────────────────────────────────────────
+
+const ChipFiltro: React.FC<{ label: string; onRemove: () => void }> = ({ label, onRemove }) => (
+    <View style={chipStyles.container}>
+        <Text style={chipStyles.label}>{label}</Text>
+        <TouchableOpacity onPress={onRemove} hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}>
+            <Ionicons name="close" size={13} color="#8297D9" />
+        </TouchableOpacity>
+    </View>
+);
+
+const chipStyles = StyleSheet.create({
+    container: {
+        flexDirection: 'row', alignItems: 'center', gap: 4,
+        backgroundColor: '#EEF2FF', borderRadius: 20,
+        paddingHorizontal: 10, paddingVertical: 5,
+        borderWidth: 1, borderColor: '#8297D9',
+    },
+    label: { fontSize: 12, fontWeight: '600', color: '#8297D9' },
+});
+
+// ─── Componente principal ─────────────────────────────────────────────────────
+
 export const AgendaPage: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<ViewMode>('lista');
@@ -89,69 +107,66 @@ export const AgendaPage: React.FC = () => {
     const [activities, setActivities] = useState<Activity[]>(createDemoActivities());
     const [draftActivity, setDraftActivity] = useState<Activity | null>(null);
 
-    const selectedDateKey = dateKey(selectedDate);
-    const selectedActivity = selectedActivityId ? activities.find(activity => activity.id === selectedActivityId) || null : null;
-    const activitiesForDay = activities.filter(activity => activity.date === selectedDateKey);
-    const completedCount = activitiesForDay.filter(activity => activity.status === 'concluida').length;
-    const pendingCount = activitiesForDay.filter(activity => activity.status === 'pendente' || activity.status === 'atrasada').length;
-    const inProgressCount = activitiesForDay.filter(activity => activity.status === 'em_andamento').length;
-    const hasActivities = activitiesForDay.length > 0;
+    // ── Filtros Sprint 3 ──────────────────────────────────────────────────────
+    const [filtroResidente, setFiltroResidente] = useState<string | undefined>(undefined);
+    const [filtroPeriodo, setFiltroPeriodo] = useState<Periodo | undefined>(undefined);
+    const [filtroStatus, setFiltroStatus] = useState<ActivityStatus | undefined>(undefined);
 
-    const openDetails = (activity: Activity) => {
-        setSelectedActivityId(activity.id);
-        setViewMode('detalhe');
+    const residentes = useMemo(() => Array.from(new Set(activities.map(a => a.resident))).sort(), [activities]);
+
+    const filtrosAtivos = [
+        filtroResidente !== undefined && { key: 'residente', label: filtroResidente.replace(/^(Sr\.|Sra\.) /, ''), onRemove: () => setFiltroResidente(undefined) },
+        filtroPeriodo !== undefined && { key: 'periodo', label: periodMeta[filtroPeriodo].label, onRemove: () => setFiltroPeriodo(undefined) },
+        filtroStatus !== undefined && { key: 'status', label: statusMeta[filtroStatus].label, onRemove: () => setFiltroStatus(undefined) },
+    ].filter(Boolean) as { key: string; label: string; onRemove: () => void }[];
+
+    const temFiltros = filtrosAtivos.length > 0;
+
+    const limparFiltros = () => {
+        setFiltroResidente(undefined);
+        setFiltroPeriodo(undefined);
+        setFiltroStatus(undefined);
     };
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const selectedDateKey = dateKey(selectedDate);
+    const selectedActivity = selectedActivityId ? activities.find(a => a.id === selectedActivityId) || null : null;
+
+    const activitiesForDay = useMemo(() => {
+        let result = activities.filter(a => a.date === selectedDateKey);
+        if (filtroResidente) result = result.filter(a => a.resident === filtroResidente);
+        if (filtroPeriodo) result = result.filter(a => a.period === filtroPeriodo);
+        if (filtroStatus) result = result.filter(a => a.status === filtroStatus);
+        return result;
+    }, [activities, selectedDateKey, filtroResidente, filtroPeriodo, filtroStatus]);
+
+    const completedCount = activitiesForDay.filter(a => a.status === 'concluida').length;
+    const pendingCount = activitiesForDay.filter(a => a.status === 'pendente' || a.status === 'atrasada').length;
+    const inProgressCount = activitiesForDay.filter(a => a.status === 'em_andamento').length;
+
+    const openDetails = (activity: Activity) => { setSelectedActivityId(activity.id); setViewMode('detalhe'); };
 
     const startCreating = () => {
-        setDraftActivity({
-            id: 0,
-            date: selectedDateKey,
-            period: 'manhã',
-            time: '',
-            title: '',
-            resident: '',
-            status: 'pendente',
-            location: '',
-            notes: '',
-            responsible: '',
-        });
+        setDraftActivity({ id: 0, date: selectedDateKey, period: 'manhã', time: '', title: '', resident: '', status: 'pendente', location: '', notes: '', responsible: '' });
         setViewMode('criar');
     };
 
     const saveNewActivity = () => {
-        if (!draftActivity || !draftActivity.title.trim()) {
-            return;
-        }
+        if (!draftActivity || !draftActivity.title.trim()) return;
         const newId = activities.length > 0 ? Math.max(...activities.map(a => a.id)) + 1 : 1;
         setActivities(prev => [...prev, { ...draftActivity, id: newId }]);
         resetToList();
     };
 
-    const startEditing = () => {
-        if (!selectedActivity) {
-            return;
-        }
-
-        setDraftActivity({ ...selectedActivity });
-        setViewMode('editar');
-    };
+    const startEditing = () => { if (!selectedActivity) return; setDraftActivity({ ...selectedActivity }); setViewMode('editar'); };
 
     const saveEditing = () => {
-        if (!draftActivity) {
-            return;
-        }
-
-        setActivities(prev => prev.map(activity => (
-            activity.id === draftActivity.id ? { ...activity, ...draftActivity } : activity
-        )));
+        if (!draftActivity) return;
+        setActivities(prev => prev.map(a => a.id === draftActivity.id ? { ...a, ...draftActivity } : a));
         setViewMode('detalhe');
     };
 
-    const resetToList = () => {
-        setViewMode('lista');
-        setSelectedActivityId(null);
-        setDraftActivity(null);
-    };
+    const resetToList = () => { setViewMode('lista'); setSelectedActivityId(null); setDraftActivity(null); };
 
     const renderStatusChip = (status: ActivityStatus) => {
         const meta = statusMeta[status];
@@ -165,32 +180,19 @@ export const AgendaPage: React.FC = () => {
     const renderEditField = (label: string, value: string, onChangeText: (text: string) => void, multiline = false) => (
         <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>{label}</Text>
-            <TextInput
-                style={[styles.fieldInput, multiline && styles.fieldInputMultiline]}
-                value={value}
-                onChangeText={onChangeText}
-                multiline={multiline}
-            />
+            <TextInput style={[styles.fieldInput, multiline && styles.fieldInputMultiline]} value={value} onChangeText={onChangeText} multiline={multiline} />
         </View>
     );
 
     const renderActivityCard = (activity: Activity) => {
         const meta = statusMeta[activity.status];
-
         return (
-            <TouchableOpacity
-                key={activity.id}
-                style={styles.activityCard}
-                activeOpacity={0.8}
-                onPress={() => openDetails(activity)}
-            >
+            <TouchableOpacity key={activity.id} style={styles.activityCard} activeOpacity={0.8} onPress={() => openDetails(activity)}>
                 <View style={[styles.activityAccent, { backgroundColor: meta.color }]} />
-
                 <View style={styles.activityTimeColumn}>
                     <Text style={styles.activityTime}>{activity.time}</Text>
                     <View style={styles.activityTimeLine} />
                 </View>
-
                 <View style={styles.activityContent}>
                     <View style={styles.activityHeaderRow}>
                         <Text style={styles.activityTitle}>{activity.title}</Text>
@@ -198,880 +200,297 @@ export const AgendaPage: React.FC = () => {
                     </View>
                     <Text style={styles.activityResident}>{activity.resident}</Text>
                     <Text style={styles.activityMeta}>{activity.location} • {activity.responsible}</Text>
-                    <View style={styles.activityFooter}>
-                        <View style={styles.periodBadge}>
-                            <Ionicons name="calendar-outline" size={14} color="#8297D9" />
-                            <Text style={styles.periodBadgeText}>{activity.period}</Text>
-                        </View>
-                        <Text style={styles.detailLink}>Ver detalhes</Text>
-                    </View>
                 </View>
             </TouchableOpacity>
         );
     };
 
-    return (
-        <ScrollView style={styles.screen} showsVerticalScrollIndicator={false} contentContainerStyle={styles.screenContent}>
-            <View style={styles.heroCard}>
-                <View style={styles.heroTopRow}>
-                    <View style={styles.heroCopy}>
-                        <Text style={styles.heroEyebrow}>Agenda / atividades do dia</Text>
-                        <Text style={styles.heroTitle}>Organize o turno por período</Text>
-                        <Text style={styles.heroSubtitle}>Acompanhe manhã, tarde e noite com acesso rápido aos detalhes e à edição.</Text>
-                    </View>
-                    <View style={styles.heroIconBadge}>
-                        <Ionicons name="calendar" size={28} color="#8297D9" />
-                    </View>
-                </View>
-
-                <View style={styles.heroStatsRow}>
-                    <View style={styles.heroStatCard}>
-                        <Text style={styles.heroStatNumber}>{activitiesForDay.length}</Text>
-                        <Text style={styles.heroStatLabel}>Atividades</Text>
-                    </View>
-                    <View style={styles.heroStatCard}>
-                        <Text style={styles.heroStatNumber}>{pendingCount}</Text>
-                        <Text style={styles.heroStatLabel}>Pendentes</Text>
-                    </View>
-                    <View style={styles.heroStatCard}>
-                        <Text style={styles.heroStatNumber}>{completedCount}</Text>
-                        <Text style={styles.heroStatLabel}>Concluídas</Text>
-                    </View>
-                </View>
-            </View>
-
-            <View style={styles.quickStrip}>
-                {(['manhã', 'tarde', 'noite'] as Periodo[]).map(periodo => {
-                    const meta = periodMeta[periodo];
-                    const count = activitiesForDay.filter(activity => activity.period === periodo).length;
-
-                    return (
-                        <View key={periodo} style={styles.quickStripItem}>
-                            <View style={[styles.quickStripIcon, { backgroundColor: meta.backgroundColor }]}>
-                                <Ionicons name={meta.icon} size={16} color={meta.color} />
-                            </View>
-                            <Text style={styles.quickStripValue}>{count}</Text>
-                            <Text style={styles.quickStripLabel}>{meta.label}</Text>
-                        </View>
-                    );
-                })}
-            </View>
-
-            <View style={styles.dateSelector}>
-                <TouchableOpacity style={styles.dateNavButton} onPress={() => setSelectedDate(prev => shiftDate(prev, -1))}>
-                    <Ionicons name="chevron-back" size={18} color="#1F2937" />
-                </TouchableOpacity>
-
-                <View style={styles.dateCenter}>
-                    <Text style={styles.dateLabel}>{formatDayLabel(selectedDate)}</Text>
-                    <Text style={styles.dateCount}>{activitiesForDay.length} atividade(s) no dia</Text>
-                </View>
-
-                <TouchableOpacity style={styles.dateNavButton} onPress={() => setSelectedDate(prev => shiftDate(prev, 1))}>
-                    <Ionicons name="chevron-forward" size={18} color="#1F2937" />
-                </TouchableOpacity>
-            </View>
-
-            <View style={styles.controlsRow}>
-                <TouchableOpacity style={styles.todayButton} onPress={() => setSelectedDate(new Date())}>
-                    <Ionicons name="today-outline" size={16} color="#8297D9" />
-                    <Text style={styles.todayButtonText}>Hoje</Text>
-                    <View style={styles.todayBadge}>
-                        <Text style={styles.todayBadgeText}>{inProgressCount} em andamento</Text>
-                    </View>
-                </TouchableOpacity>
-
-                {viewMode === 'lista' && (
-                    <TouchableOpacity style={styles.newActivityFab} onPress={startCreating} activeOpacity={0.85}>
-                        <Ionicons name="add" size={20} color="#FFFFFF" />
-                        <Text style={styles.newActivityFabText}>Nova atividade</Text>
+    // ── Vista de detalhe ──────────────────────────────────────────────────────
+    if (viewMode === 'detalhe' && selectedActivity) {
+        const pMeta = periodMeta[selectedActivity.period];
+        return (
+            <View style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={resetToList} style={styles.backBtn}>
+                        <Ionicons name="arrow-back" size={20} color="#1F2937" />
                     </TouchableOpacity>
-                )}
-            </View>
-
-            {viewMode === 'lista' && (
-                <View style={styles.listSection}>
-                    {!hasActivities && (
-                        <View style={styles.emptyDayCard}>
-                            <View style={styles.emptyDayIcon}>
-                                <Ionicons name="calendar-outline" size={28} color="#8297D9" />
-                            </View>
-                            <Text style={styles.emptyDayTitle}>Nenhuma atividade neste dia</Text>
-                            <Text style={styles.emptyDayText}>Use as setas para navegar entre os dias ou toque em Hoje para voltar ao dia atual.</Text>
-                            <TouchableOpacity style={styles.emptyDayButton} onPress={startCreating}>
-                                <Ionicons name="add-circle-outline" size={16} color="#8297D9" />
-                                <Text style={styles.emptyDayButtonText}>Criar primeira atividade</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {periodos.map(periodo => {
-                        const items = activitiesForDay.filter(activity => activity.period === periodo);
-                        const meta = periodMeta[periodo];
-
-                        return (
-                            <View key={periodo} style={styles.periodSection}>
-                                <View style={styles.periodHeader}>
-                                    <View style={styles.periodHeaderLeft}>
-                                        <View style={[styles.periodIcon, { backgroundColor: meta.backgroundColor }]}>
-                                            <Ionicons name={meta.icon} size={16} color={meta.color} />
-                                        </View>
-                                        <View>
-                                            <Text style={styles.periodTitle}>{meta.label}</Text>
-                                            <Text style={styles.periodSubtitle}>{items.length === 0 ? 'Sem atividades' : 'Atividades programadas'}</Text>
-                                        </View>
-                                    </View>
-                                    <Text style={styles.periodCount}>{items.length}</Text>
-                                </View>
-
-                                {items.length === 0 ? (
-                                    <View style={styles.emptyPeriod}>
-                                        <Text style={styles.emptyPeriodText}>Sem atividades para este período.</Text>
-                                    </View>
-                                ) : (
-                                    items.map(renderActivityCard)
-                                )}
-                            </View>
-                        );
-                    })}
+                    <Text style={styles.headerTitle}>Detalhes</Text>
+                    <TouchableOpacity onPress={startEditing} style={styles.editBtn}>
+                        <Ionicons name="create-outline" size={20} color="#8297D9" />
+                        <Text style={styles.editBtnText}>Editar</Text>
+                    </TouchableOpacity>
                 </View>
-            )}
-
-            {viewMode === 'detalhe' && selectedActivity && (
-                <View style={styles.detailCard}>
-                    <View style={styles.detailHeader}>
-                        <View>
-                            <Text style={styles.detailKicker}>Detalhes da atividade</Text>
-                            <Text style={styles.detailTitle}>{selectedActivity.title}</Text>
+                <ScrollView style={styles.detailScroll} showsVerticalScrollIndicator={false}>
+                    <View style={styles.detailCard}>
+                        <View style={[styles.detailPeriodBadge, { backgroundColor: pMeta.backgroundColor }]}>
+                            <Ionicons name={pMeta.icon} size={16} color={pMeta.color} />
+                            <Text style={[styles.detailPeriodText, { color: pMeta.color }]}>{pMeta.label} • {selectedActivity.time}</Text>
                         </View>
+                        <Text style={styles.detailTitle}>{selectedActivity.title}</Text>
                         {renderStatusChip(selectedActivity.status)}
-                    </View>
-
-                    <View style={styles.detailRow}><Text style={styles.detailLabel}>Horário</Text><Text style={styles.detailValue}>{selectedActivity.time}</Text></View>
-                    <View style={styles.detailRow}><Text style={styles.detailLabel}>Período</Text><Text style={styles.detailValue}>{selectedActivity.period}</Text></View>
-                    <View style={styles.detailRow}><Text style={styles.detailLabel}>Idoso</Text><Text style={styles.detailValue}>{selectedActivity.resident}</Text></View>
-                    <View style={styles.detailRow}><Text style={styles.detailLabel}>Local</Text><Text style={styles.detailValue}>{selectedActivity.location}</Text></View>
-                    <View style={styles.detailRow}><Text style={styles.detailLabel}>Responsável</Text><Text style={styles.detailValue}>{selectedActivity.responsible}</Text></View>
-                    <View style={styles.detailNotes}><Text style={styles.detailLabel}>Observações</Text><Text style={styles.detailNotesValue}>{selectedActivity.notes}</Text></View>
-
-                    <View style={styles.detailActions}>
-                        <TouchableOpacity style={styles.secondaryButton} onPress={resetToList}>
-                            <Text style={styles.secondaryButtonText}>Voltar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.primaryButton} onPress={startEditing}>
-                            <Text style={styles.primaryButtonText}>Editar atividade</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            )}
-
-            {viewMode === 'criar' && draftActivity && (
-                <View style={styles.detailCard}>
-                    <View style={styles.detailHeader}>
-                        <View style={styles.detailHeaderLeft}>
-                            <View style={styles.createKickerBadge}>
-                                <Ionicons name="add-circle" size={16} color="#8297D9" />
-                                <Text style={styles.detailKicker}>Nova atividade</Text>
+                        <View style={styles.detailDivider} />
+                        <View style={styles.detailRow}><Ionicons name="person-outline" size={16} color="#9CA3AF" /><Text style={styles.detailRowText}>{selectedActivity.resident}</Text></View>
+                        <View style={styles.detailRow}><Ionicons name="location-outline" size={16} color="#9CA3AF" /><Text style={styles.detailRowText}>{selectedActivity.location}</Text></View>
+                        <View style={styles.detailRow}><Ionicons name="shield-checkmark-outline" size={16} color="#9CA3AF" /><Text style={styles.detailRowText}>{selectedActivity.responsible}</Text></View>
+                        {selectedActivity.notes ? (
+                            <View style={styles.detailNotes}>
+                                <Text style={styles.detailNotesLabel}>Observações</Text>
+                                <Text style={styles.detailNotesText}>{selectedActivity.notes}</Text>
                             </View>
-                            <Text style={styles.detailTitle}>{formatDayLabel(selectedDate)}</Text>
-                        </View>
+                        ) : null}
                     </View>
+                </ScrollView>
+            </View>
+        );
+    }
 
+    // ── Vista de edição / criação ─────────────────────────────────────────────
+    if ((viewMode === 'editar' || viewMode === 'criar') && draftActivity) {
+        const isCreating = viewMode === 'criar';
+        return (
+            <View style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={isCreating ? resetToList : () => setViewMode('detalhe')} style={styles.backBtn}>
+                        <Ionicons name="arrow-back" size={20} color="#1F2937" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>{isCreating ? 'Nova Atividade' : 'Editar'}</Text>
+                    <TouchableOpacity onPress={isCreating ? saveNewActivity : saveEditing} style={styles.saveBtn}>
+                        <Text style={styles.saveBtnText}>Salvar</Text>
+                    </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
+                    {renderEditField('Título', draftActivity.title, t => setDraftActivity(p => p ? { ...p, title: t } : p))}
+                    {renderEditField('Residente', draftActivity.resident, t => setDraftActivity(p => p ? { ...p, resident: t } : p))}
+                    {renderEditField('Horário', draftActivity.time, t => setDraftActivity(p => p ? { ...p, time: t } : p))}
+                    {renderEditField('Local', draftActivity.location, t => setDraftActivity(p => p ? { ...p, location: t } : p))}
+                    {renderEditField('Responsável', draftActivity.responsible, t => setDraftActivity(p => p ? { ...p, responsible: t } : p))}
+                    {renderEditField('Observações', draftActivity.notes, t => setDraftActivity(p => p ? { ...p, notes: t } : p), true)}
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>Período</Text>
                         <View style={styles.periodOptions}>
-                            {(periodos).map(periodo => {
-                                const meta = periodMeta[periodo];
-                                const isSelected = draftActivity.period === periodo;
-
+                            {periodos.map(p => {
+                                const meta = periodMeta[p];
+                                const active = draftActivity.period === p;
                                 return (
-                                    <TouchableOpacity
-                                        key={periodo}
-                                        style={[styles.periodOption, isSelected && { backgroundColor: meta.backgroundColor, borderColor: meta.color }]}
-                                        onPress={() => setDraftActivity(prev => prev ? { ...prev, period: periodo } : prev)}
-                                    >
-                                        <Ionicons name={meta.icon} size={14} color={isSelected ? meta.color : '#9CA3AF'} />
-                                        <Text style={[styles.periodOptionText, { color: isSelected ? meta.color : '#6B7280' }]}>{meta.label}</Text>
+                                    <TouchableOpacity key={p} style={[styles.periodOption, active && { backgroundColor: meta.backgroundColor, borderColor: meta.color }]} onPress={() => setDraftActivity(prev => prev ? { ...prev, period: p } : prev)}>
+                                        <Ionicons name={meta.icon} size={16} color={active ? meta.color : '#9CA3AF'} />
+                                        <Text style={[styles.periodOptionText, { color: active ? meta.color : '#9CA3AF' }]}>{meta.label}</Text>
                                     </TouchableOpacity>
                                 );
                             })}
                         </View>
                     </View>
-
-                    {renderEditField('Título *', draftActivity.title, text => setDraftActivity(prev => prev ? { ...prev, title: text } : prev))}
-                    {renderEditField('Horário (ex: 08:00)', draftActivity.time, text => setDraftActivity(prev => prev ? { ...prev, time: text } : prev))}
-                    {renderEditField('Idoso', draftActivity.resident, text => setDraftActivity(prev => prev ? { ...prev, resident: text } : prev))}
-                    {renderEditField('Local', draftActivity.location, text => setDraftActivity(prev => prev ? { ...prev, location: text } : prev))}
-                    {renderEditField('Responsável', draftActivity.responsible, text => setDraftActivity(prev => prev ? { ...prev, responsible: text } : prev))}
-                    {renderEditField('Observações', draftActivity.notes, text => setDraftActivity(prev => prev ? { ...prev, notes: text } : prev), true)}
-
-                    <View style={styles.fieldGroup}>
-                        <Text style={styles.fieldLabel}>Status inicial</Text>
-                        <View style={styles.statusOptions}>
-                            {(Object.keys(statusMeta) as ActivityStatus[]).map(status => {
-                                const meta = statusMeta[status];
-                                const isSelected = draftActivity.status === status;
-
-                                return (
-                                    <TouchableOpacity
-                                        key={status}
-                                        style={[styles.statusOption, { backgroundColor: isSelected ? meta.backgroundColor : '#F9FAFB' }]}
-                                        onPress={() => setDraftActivity(prev => prev ? { ...prev, status } : prev)}
-                                    >
-                                        <Text style={[styles.statusOptionText, { color: isSelected ? meta.color : '#6B7280' }]}>{meta.label}</Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-                    </View>
-
-                    <View style={styles.detailActions}>
-                        <TouchableOpacity style={styles.secondaryButton} onPress={resetToList}>
-                            <Text style={styles.secondaryButtonText}>Cancelar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.primaryButton, !draftActivity.title.trim() && styles.primaryButtonDisabled]}
-                            onPress={saveNewActivity}
-                            disabled={!draftActivity.title.trim()}
-                        >
-                            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                            <Text style={styles.primaryButtonText}>Salvar atividade</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            )}
-
-            {viewMode === 'editar' && draftActivity && (
-                <View style={styles.detailCard}>
-                    <View style={styles.detailHeader}>
-                        <View>
-                            <Text style={styles.detailKicker}>Editar atividade</Text>
-                            <Text style={styles.detailTitle}>Atualize os dados do turno</Text>
-                        </View>
-                    </View>
-
-                    {renderEditField('Título', draftActivity.title, text => setDraftActivity(prev => prev ? { ...prev, title: text } : prev))}
-                    {renderEditField('Horário', draftActivity.time, text => setDraftActivity(prev => prev ? { ...prev, time: text } : prev))}
-                    {renderEditField('Idoso', draftActivity.resident, text => setDraftActivity(prev => prev ? { ...prev, resident: text } : prev))}
-                    {renderEditField('Local', draftActivity.location, text => setDraftActivity(prev => prev ? { ...prev, location: text } : prev))}
-                    {renderEditField('Observações', draftActivity.notes, text => setDraftActivity(prev => prev ? { ...prev, notes: text } : prev), true)}
-
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>Status</Text>
                         <View style={styles.statusOptions}>
-                            {(Object.keys(statusMeta) as ActivityStatus[]).map(status => {
-                                const meta = statusMeta[status];
-                                const isSelected = draftActivity.status === status;
-
+                            {(Object.keys(statusMeta) as ActivityStatus[]).map(s => {
+                                const meta = statusMeta[s];
+                                const active = draftActivity.status === s;
                                 return (
-                                    <TouchableOpacity
-                                        key={status}
-                                        style={[styles.statusOption, { backgroundColor: isSelected ? meta.backgroundColor : '#F9FAFB' }]}
-                                        onPress={() => setDraftActivity(prev => prev ? { ...prev, status } : prev)}
-                                    >
-                                        <Text style={[styles.statusOptionText, { color: isSelected ? meta.color : '#6B7280' }]}>{meta.label}</Text>
+                                    <TouchableOpacity key={s} style={[styles.statusOption, { backgroundColor: active ? meta.backgroundColor : '#F9FAFB' }]} onPress={() => setDraftActivity(prev => prev ? { ...prev, status: s } : prev)}>
+                                        <Text style={[styles.statusOptionText, { color: active ? meta.color : '#9CA3AF' }]}>{meta.label}</Text>
                                     </TouchableOpacity>
                                 );
                             })}
                         </View>
                     </View>
+                    <View style={{ height: 40 }} />
+                </ScrollView>
+            </View>
+        );
+    }
 
-                    <View style={styles.detailActions}>
-                        <TouchableOpacity style={styles.secondaryButton} onPress={() => setViewMode('detalhe')}>
-                            <Text style={styles.secondaryButtonText}>Cancelar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.primaryButton} onPress={saveEditing}>
-                            <Text style={styles.primaryButtonText}>Salvar alterações</Text>
-                        </TouchableOpacity>
-                    </View>
+    // ── Vista de lista (principal) ────────────────────────────────────────────
+    return (
+        <View style={styles.container}>
+            <View style={styles.header}>
+                <Text style={styles.headerTitle}>Agenda</Text>
+                <TouchableOpacity style={styles.addBtn} onPress={startCreating}>
+                    <Ionicons name="add" size={22} color="#FFFFFF" />
+                </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Navegação de datas */}
+                <View style={styles.dateNav}>
+                    <TouchableOpacity onPress={() => setSelectedDate(d => shiftDate(d, -1))} style={styles.dateNavBtn}>
+                        <Ionicons name="chevron-back" size={20} color="#6B7280" />
+                    </TouchableOpacity>
+                    <Text style={styles.dateLabel}>{formatDayLabel(selectedDate)}</Text>
+                    <TouchableOpacity onPress={() => setSelectedDate(d => shiftDate(d, 1))} style={styles.dateNavBtn}>
+                        <Ionicons name="chevron-forward" size={20} color="#6B7280" />
+                    </TouchableOpacity>
                 </View>
-            )}
-        </ScrollView>
+
+                {/* Resumo do dia */}
+                <View style={styles.summaryRow}>
+                    <View style={styles.summaryCard}><Text style={styles.summaryNum}>{completedCount}</Text><Text style={styles.summaryLabel}>Concluídas</Text></View>
+                    <View style={styles.summaryCard}><Text style={[styles.summaryNum, { color: '#1D4ED8' }]}>{inProgressCount}</Text><Text style={styles.summaryLabel}>Em andamento</Text></View>
+                    <View style={styles.summaryCard}><Text style={[styles.summaryNum, { color: '#B45309' }]}>{pendingCount}</Text><Text style={styles.summaryLabel}>Pendentes</Text></View>
+                </View>
+
+                {/* ── Filtros Sprint 3 ── */}
+                <View style={styles.filtersSection}>
+                    {/* Filtro por Residente */}
+                    <Text style={styles.filterLabel}>Residente</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+                        <TouchableOpacity style={[styles.filterChip, filtroResidente === undefined && styles.filterChipActive]} onPress={() => setFiltroResidente(undefined)}>
+                            <Text style={[styles.filterChipText, filtroResidente === undefined && styles.filterChipTextActive]}>Todos</Text>
+                        </TouchableOpacity>
+                        {residentes.map(r => (
+                            <TouchableOpacity key={r} style={[styles.filterChip, filtroResidente === r && styles.filterChipActive]} onPress={() => setFiltroResidente(filtroResidente === r ? undefined : r)}>
+                                <Text style={[styles.filterChipText, filtroResidente === r && styles.filterChipTextActive]} numberOfLines={1}>{r.replace(/^(Sr\.|Sra\.) /, '')}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    {/* Filtro por Período */}
+                    <Text style={styles.filterLabel}>Período</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+                        <TouchableOpacity style={[styles.filterChip, filtroPeriodo === undefined && styles.filterChipActive]} onPress={() => setFiltroPeriodo(undefined)}>
+                            <Text style={[styles.filterChipText, filtroPeriodo === undefined && styles.filterChipTextActive]}>Todos</Text>
+                        </TouchableOpacity>
+                        {periodos.map(p => (
+                            <TouchableOpacity key={p} style={[styles.filterChip, filtroPeriodo === p && styles.filterChipActive]} onPress={() => setFiltroPeriodo(filtroPeriodo === p ? undefined : p)}>
+                                <Ionicons name={periodMeta[p].icon} size={13} color={filtroPeriodo === p ? '#FFFFFF' : '#9CA3AF'} style={{ marginRight: 4 }} />
+                                <Text style={[styles.filterChipText, filtroPeriodo === p && styles.filterChipTextActive]}>{periodMeta[p].label}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    {/* Filtro por Status */}
+                    <Text style={styles.filterLabel}>Status</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+                        <TouchableOpacity style={[styles.filterChip, filtroStatus === undefined && styles.filterChipActive]} onPress={() => setFiltroStatus(undefined)}>
+                            <Text style={[styles.filterChipText, filtroStatus === undefined && styles.filterChipTextActive]}>Todos</Text>
+                        </TouchableOpacity>
+                        {(Object.keys(statusMeta) as ActivityStatus[]).map(s => (
+                            <TouchableOpacity key={s} style={[styles.filterChip, filtroStatus === s && styles.filterChipActive]} onPress={() => setFiltroStatus(filtroStatus === s ? undefined : s)}>
+                                <Text style={[styles.filterChipText, filtroStatus === s && styles.filterChipTextActive]}>{statusMeta[s].label}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    {/* Chips de filtros ativos + Limpar */}
+                    {temFiltros && (
+                        <View style={styles.activeFiltersRow}>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
+                                {filtrosAtivos.map(f => <ChipFiltro key={f.key} label={f.label} onRemove={f.onRemove} />)}
+                            </ScrollView>
+                            <TouchableOpacity style={styles.clearBtn} onPress={limparFiltros}>
+                                <Ionicons name="close-circle" size={14} color="#EF4444" />
+                                <Text style={styles.clearBtnText}>Limpar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </View>
+
+                {/* Atividades por período */}
+                {activitiesForDay.length === 0 ? (
+                    <View style={styles.emptyState}>
+                        <Ionicons name="calendar-outline" size={48} color="#D1D5DB" />
+                        <Text style={styles.emptyText}>{temFiltros ? 'Nenhuma atividade com esses filtros' : 'Nenhuma atividade para este dia'}</Text>
+                        {temFiltros && (
+                            <TouchableOpacity style={styles.clearBtnLarge} onPress={limparFiltros}>
+                                <Text style={styles.clearBtnLargeText}>Limpar filtros</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                ) : (
+                    periodos.map(periodo => {
+                        const items = activitiesForDay.filter(a => a.period === periodo);
+                        if (items.length === 0) return null;
+                        const meta = periodMeta[periodo];
+                        return (
+                            <View key={periodo} style={styles.periodSection}>
+                                <View style={[styles.periodHeader, { backgroundColor: meta.backgroundColor }]}>
+                                    <Ionicons name={meta.icon} size={18} color={meta.color} />
+                                    <Text style={[styles.periodHeaderText, { color: meta.color }]}>{meta.label}</Text>
+                                    <Text style={[styles.periodCount, { color: meta.color }]}>{items.length}</Text>
+                                </View>
+                                {items.map(renderActivityCard)}
+                            </View>
+                        );
+                    })
+                )}
+
+                <View style={{ height: 40 }} />
+            </ScrollView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#F8FAFC',
-    },
-    screenContent: {
-        paddingBottom: 24,
-    },
-    heroCard: {
-        backgroundColor: '#8297D9',
-        borderRadius: 24,
-        padding: 20,
-        marginTop: 18,
-        marginHorizontal: 20,
-        shadowColor: '#8297D9',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.18,
-        shadowRadius: 18,
-        elevation: 5,
-    },
-    heroEyebrow: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#E0E7FF',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-        marginBottom: 8,
-    },
-    heroTitle: {
-        fontSize: 24,
-        fontWeight: '800',
-        color: '#FFFFFF',
-        letterSpacing: -0.6,
-        marginBottom: 8,
-    },
-    heroSubtitle: {
-        fontSize: 14,
-        color: 'rgba(255, 255, 255, 0.9)',
-        lineHeight: 20,
-    },
-    heroTopRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-        gap: 16,
-    },
-    heroCopy: {
-        flex: 1,
-    },
-    heroIconBadge: {
-        width: 56,
-        height: 56,
-        borderRadius: 18,
-        backgroundColor: 'rgba(255, 255, 255, 0.18)',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    heroStatsRow: {
-        flexDirection: 'row',
-        gap: 10,
-        marginTop: 18,
-    },
-    heroStatCard: {
-        flex: 1,
-        backgroundColor: 'rgba(255, 255, 255, 0.16)',
-        borderRadius: 16,
-        paddingVertical: 12,
-        paddingHorizontal: 10,
-        alignItems: 'center',
-    },
-    heroStatNumber: {
-        fontSize: 20,
-        fontWeight: '800',
-        color: '#FFFFFF',
-        marginBottom: 2,
-    },
-    heroStatLabel: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: 'rgba(255, 255, 255, 0.85)',
-        textTransform: 'uppercase',
-        letterSpacing: 0.6,
-    },
-    quickStrip: {
-        flexDirection: 'row',
-        paddingHorizontal: 20,
-        gap: 10,
-        marginTop: 16,
-    },
-    quickStripItem: {
-        flex: 1,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 18,
-        paddingVertical: 14,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    quickStripIcon: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 10,
-    },
-    quickStripValue: {
-        fontSize: 18,
-        fontWeight: '800',
-        color: '#1F2937',
-        marginBottom: 2,
-    },
-    quickStripLabel: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: '#6B7280',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    dateSelector: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        marginTop: 18,
-        gap: 12,
-    },
-    dateNavButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: '#FFFFFF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    dateCenter: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    dateLabel: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: '#1F2937',
-        textAlign: 'center',
-    },
-    dateCount: {
-        fontSize: 12,
-        color: '#6B7280',
-        marginTop: 4,
-    },
-    controlsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        marginTop: 14,
-        gap: 10,
-    },
-    todayButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 999,
-        backgroundColor: '#EEF2FF',
-    },
-    newActivityFab: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 999,
-        backgroundColor: '#8297D9',
-        shadowColor: '#8297D9',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    newActivityFabText: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#FFFFFF',
-    },
-    todayButtonText: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#8297D9',
-    },
-    todayBadge: {
-        backgroundColor: '#FFFFFF',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 999,
-    },
-    todayBadgeText: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: '#8297D9',
-    },
-    listSection: {
-        marginTop: 18,
-        paddingHorizontal: 20,
-    },
-    emptyDayCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 22,
-        padding: 20,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
-        marginBottom: 18,
-    },
-    emptyDayIcon: {
-        width: 56,
-        height: 56,
-        borderRadius: 18,
-        backgroundColor: '#EEF2FF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 12,
-    },
-    emptyDayTitle: {
-        fontSize: 16,
-        fontWeight: '800',
-        color: '#1F2937',
-        marginBottom: 6,
-        textAlign: 'center',
-    },
-    emptyDayText: {
-        fontSize: 13,
-        color: '#6B7280',
-        lineHeight: 18,
-        textAlign: 'center',
-    },
-    emptyDayButton: {
-        marginTop: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 999,
-        backgroundColor: '#EEF2FF',
-    },
-    emptyDayButtonText: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#8297D9',
-    },
-    periodSection: {
-        marginBottom: 18,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 22,
-        padding: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
-    },
-    periodHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 12,
-    },
-    periodHeaderLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-    },
-    periodIcon: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: '#EEF2FF',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    periodTitle: {
-        fontSize: 16,
-        fontWeight: '800',
-        color: '#1F2937',
-        textTransform: 'capitalize',
-    },
-    periodSubtitle: {
-        fontSize: 12,
-        color: '#6B7280',
-        marginTop: 2,
-    },
-    periodCount: {
-        minWidth: 26,
-        height: 26,
-        borderRadius: 13,
-        textAlign: 'center',
-        textAlignVertical: 'center',
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#8297D9',
-        backgroundColor: '#EEF2FF',
-        overflow: 'hidden',
-    },
-    emptyPeriod: {
-        backgroundColor: '#F8FAFC',
-        borderRadius: 18,
-        paddingVertical: 18,
-        paddingHorizontal: 16,
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    emptyPeriodText: {
-        color: '#9CA3AF',
-        fontSize: 13,
-    },
-    activityCard: {
-        flexDirection: 'row',
-        backgroundColor: '#F8FAFC',
-        borderRadius: 18,
-        padding: 16,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: '#EEF2FF',
-        overflow: 'hidden',
-    },
-    activityAccent: {
-        width: 4,
-        borderRadius: 999,
-        marginRight: 12,
-    },
-    activityTimeColumn: {
-        width: 58,
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    activityTime: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: '#1F2937',
-    },
-    activityTimeLine: {
-        width: 2,
-        flex: 1,
-        backgroundColor: '#E5E7EB',
-        marginTop: 10,
-        borderRadius: 1,
-    },
-    activityContent: {
-        flex: 1,
-    },
-    activityHeaderRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        gap: 8,
-        marginBottom: 6,
-    },
-    activityTitle: {
-        flex: 1,
-        fontSize: 16,
-        fontWeight: '800',
-        color: '#1F2937',
-    },
-    activityResident: {
-        fontSize: 13,
-        color: '#8297D9',
-        fontWeight: '700',
-        marginBottom: 4,
-    },
-    activityMeta: {
-        fontSize: 13,
-        color: '#6B7280',
-        lineHeight: 18,
-    },
-    activityFooter: {
-        marginTop: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    periodBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 999,
-        backgroundColor: '#F8FAFC',
-    },
-    periodBadgeText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#8297D9',
-        textTransform: 'capitalize',
-    },
-    detailLink: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#8297D9',
-    },
-    statusChip: {
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 999,
-    },
-    statusChipText: {
-        fontSize: 12,
-        fontWeight: '800',
-    },
-    detailCard: {
-        marginTop: 18,
-        marginHorizontal: 20,
-        marginBottom: 20,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        elevation: 3,
-    },
-    detailHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 18,
-        gap: 12,
-    },
-    detailKicker: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#8297D9',
-        textTransform: 'uppercase',
-        letterSpacing: 0.8,
-        marginBottom: 6,
-    },
-    detailTitle: {
-        fontSize: 22,
-        fontWeight: '800',
-        color: '#1F2937',
-        letterSpacing: -0.4,
-    },
-    detailRow: {
-        marginBottom: 14,
-    },
-    detailLabel: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#6B7280',
-        textTransform: 'uppercase',
-        letterSpacing: 0.6,
-        marginBottom: 4,
-    },
-    detailValue: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#1F2937',
-    },
-    detailNotes: {
-        marginTop: 4,
-    },
-    detailNotesValue: {
-        fontSize: 14,
-        color: '#374151',
-        lineHeight: 20,
-    },
-    detailActions: {
-        flexDirection: 'row',
-        gap: 12,
-        marginTop: 20,
-    },
-    secondaryButton: {
-        flex: 1,
-        height: 48,
-        borderRadius: 14,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#F3F4F6',
-    },
-    secondaryButtonText: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: '#374151',
-    },
-    primaryButton: {
-        flex: 1,
-        height: 48,
-        borderRadius: 14,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        backgroundColor: '#8297D9',
-    },
-    primaryButtonDisabled: {
-        backgroundColor: '#C4CFEF',
-    },
-    primaryButtonText: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: '#FFFFFF',
-    },
-    detailHeaderLeft: {
-        flex: 1,
-    },
-    createKickerBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginBottom: 6,
-    },
-    periodOptions: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    periodOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        borderRadius: 999,
-        backgroundColor: '#F9FAFB',
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-    },
-    periodOptionText: {
-        fontSize: 13,
-        fontWeight: '700',
-    },
-    fieldGroup: {
-        marginBottom: 14,
-    },
-    fieldLabel: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#6B7280',
-        textTransform: 'uppercase',
-        letterSpacing: 0.6,
-        marginBottom: 6,
-    },
-    fieldInput: {
-        minHeight: 48,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        backgroundColor: '#F9FAFB',
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        fontSize: 14,
-        color: '#1F2937',
-    },
-    fieldInputMultiline: {
-        minHeight: 96,
-        textAlignVertical: 'top',
-    },
-    statusOptions: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
-    statusOption: {
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        borderRadius: 999,
-    },
-    statusOptionText: {
-        fontSize: 12,
-        fontWeight: '800',
-    },
+    container: { flex: 1, backgroundColor: '#F8FAFC' },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 52, paddingBottom: 16, paddingHorizontal: 20, backgroundColor: '#8297D9', borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
+    headerTitle: { fontSize: 22, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5 },
+    backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
+    editBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
+    editBtnText: { fontSize: 13, fontWeight: '600', color: '#8297D9' },
+    saveBtn: { backgroundColor: '#FFFFFF', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
+    saveBtnText: { fontSize: 13, fontWeight: '700', color: '#8297D9' },
+    addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },
+    dateNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 },
+    dateNavBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 1 },
+    dateLabel: { flex: 1, textAlign: 'center', fontSize: 14, fontWeight: '600', color: '#1F2937', marginHorizontal: 8 },
+    summaryRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 10, marginBottom: 4 },
+    summaryCard: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 14, padding: 12, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+    summaryNum: { fontSize: 22, fontWeight: '700', color: '#059669' },
+    summaryLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '500', marginTop: 2 },
+    // Filtros Sprint 3
+    filtersSection: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 },
+    filterLabel: { fontSize: 12, fontWeight: '600', color: '#6B7280', marginBottom: 8, marginTop: 10 },
+    filterRow: { gap: 8, paddingRight: 20, marginBottom: 4 },
+    filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' },
+    filterChipActive: { backgroundColor: '#8297D9', borderColor: '#8297D9' },
+    filterChipText: { fontSize: 12, fontWeight: '500', color: '#6B7280' },
+    filterChipTextActive: { color: '#FFFFFF' },
+    activeFiltersRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+    clearBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#FEE2E2', borderRadius: 20, marginLeft: 8 },
+    clearBtnText: { fontSize: 12, fontWeight: '600', color: '#EF4444' },
+    // Lista
+    periodSection: { paddingHorizontal: 20, marginTop: 16 },
+    periodHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, marginBottom: 10 },
+    periodHeaderText: { flex: 1, fontSize: 14, fontWeight: '700' },
+    periodCount: { fontSize: 13, fontWeight: '700' },
+    activityCard: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 14, marginBottom: 10, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+    activityAccent: { width: 4 },
+    activityTimeColumn: { alignItems: 'center', paddingVertical: 14, paddingHorizontal: 10, width: 52 },
+    activityTime: { fontSize: 12, fontWeight: '700', color: '#374151' },
+    activityTimeLine: { flex: 1, width: 1, backgroundColor: '#E5E7EB', marginTop: 4 },
+    activityContent: { flex: 1, paddingVertical: 12, paddingRight: 14 },
+    activityHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 4 },
+    activityTitle: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1F2937' },
+    activityResident: { fontSize: 12, color: '#8297D9', fontWeight: '500', marginBottom: 2 },
+    activityMeta: { fontSize: 11, color: '#9CA3AF' },
+    statusChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+    statusChipText: { fontSize: 10, fontWeight: '700' },
+    emptyState: { alignItems: 'center', paddingVertical: 60, paddingHorizontal: 40 },
+    emptyText: { fontSize: 15, color: '#9CA3AF', textAlign: 'center', marginTop: 12 },
+    clearBtnLarge: { marginTop: 16, backgroundColor: '#8297D9', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 12 },
+    clearBtnLargeText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+    // Detalhe
+    detailScroll: { flex: 1, padding: 20 },
+    detailCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
+    detailPeriodBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, alignSelf: 'flex-start', marginBottom: 12 },
+    detailPeriodText: { fontSize: 13, fontWeight: '600' },
+    detailTitle: { fontSize: 20, fontWeight: '700', color: '#1F2937', marginBottom: 10 },
+    detailDivider: { height: 1, backgroundColor: '#F3F4F6', marginVertical: 14 },
+    detailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+    detailRowText: { fontSize: 14, color: '#374151' },
+    detailNotes: { backgroundColor: '#F8FAFC', borderRadius: 12, padding: 14, marginTop: 8 },
+    detailNotesLabel: { fontSize: 11, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 },
+    detailNotesText: { fontSize: 14, color: '#374151', lineHeight: 20 },
+    // Formulário
+    formScroll: { flex: 1, padding: 20 },
+    periodOptions: { flexDirection: 'row', gap: 8 },
+    periodOption: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 999, backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB' },
+    periodOptionText: { fontSize: 13, fontWeight: '700' },
+    fieldGroup: { marginBottom: 14 },
+    fieldLabel: { fontSize: 12, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 },
+    fieldInput: { minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#F9FAFB', paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: '#1F2937' },
+    fieldInputMultiline: { minHeight: 96, textAlignVertical: 'top' },
+    statusOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    statusOption: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 999 },
+    statusOptionText: { fontSize: 12, fontWeight: '800' },
 });
