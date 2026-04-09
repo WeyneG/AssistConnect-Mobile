@@ -64,6 +64,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
     if (currentPage === 'elderly') {
         return (
             <ElderlyListScreen
+                token={token}
                 onBack={() => setCurrentPage('home')}
                 onNavigateTab={(tab) => setCurrentPage(tab as NavigationPage)}
                 activeTab={currentPage}

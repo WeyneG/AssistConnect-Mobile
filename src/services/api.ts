@@ -115,7 +115,7 @@ export const buscarIdosos = async (
         }
 
         console.log('📡 Fazendo requisição para:', `${API_BASE_URL}/idosos?page=${page}&pageSize=${pageSize}`);
-        console.log('🔐 Token:', token ? `${token.substring(0, 20)}...` : 'SEM TOKEN');
+        console.log('🔐 Token:', typeof token === 'string' ? `${token.substring(0, 20)}...` : 'SEM TOKEN');
 
         const response = await fetch(
             `${API_BASE_URL}/idosos?page=${page}&pageSize=${pageSize}`,
