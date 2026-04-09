@@ -60,7 +60,11 @@ export default function App() {
   if (currentScreen === 'perfilIdoso' && idosoSelecionadoId !== null) {
     return (
       <>
-        <PerfilIdosoPage idosoId={idosoSelecionadoId} onBack={handleBackToHome} />
+        <PerfilIdosoPage
+          idosoId={idosoSelecionadoId}
+          token={userToken || undefined}
+          onBack={handleBackToHome}
+        />
         <StatusBar style="light" />
       </>
     );
@@ -82,7 +86,11 @@ export default function App() {
 
   return (
     <>
-      <HomePage onLogout={handleBackToLogin} onVerPerfil={handleVerPerfil} />
+      <HomePage
+        token={userToken || undefined}
+        onLogout={handleBackToLogin}
+        onVerPerfil={handleVerPerfil}
+      />
       <StatusBar style="dark" />
     </>
   );

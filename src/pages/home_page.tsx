@@ -16,13 +16,14 @@ import { ElderlyListScreen } from './elderly_list';
 import { AgendaPage } from './agenda_page';
 
 interface HomePageProps {
+    token?: string;
     onLogout: () => void;
     onVerPerfil: (idosoId: number) => void;
 }
 
 type NavigationPage = 'home' | 'elderly' | 'agenda' | 'alerts' | 'profile';
 
-export const HomePage: React.FC<HomePageProps> = ({ onLogout, onVerPerfil }) => {
+export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil }) => {
     const [currentPage, setCurrentPage] = useState<NavigationPage>('home');
     const [idosos, setIdosos] = useState<Idoso[]>([]);
     const [resumo, setResumo] = useState<ResumoIdosos | null>(null);
@@ -39,8 +40,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout, onVerPerfil }) => 
             setError(null);
             setLoading(true);
             const [idososData, resumoData] = await Promise.all([
-                buscarIdosos(),
-                buscarResumo(),
+                buscarIdosos(token),
+                buscarResumo(token),
             ]);
             setIdosos(idososData);
             setResumo(resumoData);
