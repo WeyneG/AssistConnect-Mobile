@@ -10,7 +10,7 @@ import {
     Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { buscarIdosos, buscarResumo, Idoso, ResumoIdosos } from '../services/api';
+import { buscarIdosos, buscarResumo, Idoso, ResumoIdosos, FiltrosAtividade } from '../services/api';
 import { BottomTabBar } from '../components/BottomTabBar';
 import { ElderlyListScreen } from './elderly_list';
 import { AgendaPage } from './agenda_page';
@@ -20,7 +20,37 @@ interface HomePageProps {
     onVerPerfil: (idosoId: number) => void;
 }
 
-type NavigationPage = 'home' | 'elderly' | 'agenda' | 'alerts' | 'profile';
+type NavigationPage = 'home' | 'elderly' | 'agenda' | 'profile';
+
+// ─── Tela de Perfil simples ───────────────────────────────────────────────────
+const PerfilTab: React.FC<{ onLogout: () => void; onNavigateTab: (tab: string) => void; activeTab: string }> = ({ onLogout, onNavigateTab, activeTab }) => (
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+        <View style={{ backgroundColor: '#8297D9', paddingTop: 50, paddingBottom: 24, paddingHorizontal: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}>
+            <Text style={{ fontSize: 28, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5 }}>Perfil</Text>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+            <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                <Ionicons name="person" size={48} color="#8297D9" />
+            </View>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: '#1F2937', marginBottom: 4 }}>Cuidador</Text>
+            <Text style={{ fontSize: 14, color: '#6B7280', marginBottom: 32 }}>AssistConnect</Text>
+            <TouchableOpacity onPress={onLogout} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEE2E2', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}>
+                <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+                <Text style={{ fontSize: 15, fontWeight: '600', color: '#EF4444' }}>Sair</Text>
+            </TouchableOpacity>
+        </View>
+        <BottomTabBar
+            activeTab={activeTab}
+            onTabPress={onNavigateTab}
+            tabs={[
+                { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
+                { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
+                { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
+                { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
+            ]}
+        />
+    </View>
+);
 
 export const HomePage: React.FC<HomePageProps> = ({ onLogout, onVerPerfil }) => {
     const [currentPage, setCurrentPage] = useState<NavigationPage>('home');
@@ -70,6 +100,36 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout, onVerPerfil }) => 
         );
     }
 
+    // Mostrar agenda como tela separada (sem header duplo)
+    if (currentPage === 'agenda') {
+        return (
+            <View style={{ flex: 1 }}>
+                <AgendaPage />
+                <BottomTabBar
+                    activeTab={currentPage}
+                    onTabPress={(tab) => setCurrentPage(tab as NavigationPage)}
+                    tabs={[
+                        { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
+                        { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
+                        { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
+                        { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
+                    ]}
+                />
+            </View>
+        );
+    }
+
+    // Mostrar perfil
+    if (currentPage === 'profile') {
+        return (
+            <PerfilTab
+                onLogout={onLogout}
+                onNavigateTab={(tab) => setCurrentPage(tab as NavigationPage)}
+                activeTab={currentPage}
+            />
+        );
+    }
+
     return (
         <View style={styles.container}>
             {/* Header */}
@@ -87,14 +147,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout, onVerPerfil }) => 
 
             <ScrollView
                 style={styles.content}
+                contentContainerStyle={{ paddingTop: 20 }}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8297D9']} tintColor="#8297D9" />
                 }
             >
-                {currentPage === 'agenda' ? (
-                    <AgendaPage />
-                ) : loading ? (
+                {loading ? (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color="#8297D9" />
                         <Text style={styles.loadingText}>Carregando...</Text>
@@ -252,7 +311,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
         alignItems: 'center', justifyContent: 'center',
     },
-    content: { flex: 1, marginTop: -10 },
+    content: { flex: 1 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 100 },
     loadingText: { marginTop: 16, fontSize: 15, color: '#6B7280', fontWeight: '500' },
     errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40, paddingVertical: 100 },
@@ -261,7 +320,7 @@ const styles = StyleSheet.create({
     errorMessage: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 },
     retryButton: { marginTop: 24, backgroundColor: '#8297D9', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12 },
     retryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-    statsContainer: { flexDirection: 'row', paddingHorizontal: 20, marginTop: 20, gap: 12 },
+    statsContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 12 },
     statCard: {
         flex: 1, backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16, alignItems: 'center',
         shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2,
