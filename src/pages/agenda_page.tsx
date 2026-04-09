@@ -1,7 +1,7 @@
 ﻿import React, { useState, useMemo } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    TextInput, ScrollView,
+    TextInput, ScrollView, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -111,6 +111,7 @@ export const AgendaPage: React.FC = () => {
     const [filtroResidente, setFiltroResidente] = useState<string | undefined>(undefined);
     const [filtroPeriodo, setFiltroPeriodo] = useState<Periodo | undefined>(undefined);
     const [filtroStatus, setFiltroStatus] = useState<ActivityStatus | undefined>(undefined);
+    const [modalFiltros, setModalFiltros] = useState(false);
 
     const residentes = useMemo(() => Array.from(new Set(activities.map(a => a.resident))).sort(), [activities]);
 
@@ -305,10 +306,74 @@ export const AgendaPage: React.FC = () => {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Agenda</Text>
-                <TouchableOpacity style={styles.addBtn} onPress={startCreating}>
-                    <Ionicons name="add" size={22} color="#FFFFFF" />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {/* Botão de filtro com badge quando há filtros ativos */}
+                    <TouchableOpacity style={[styles.addBtn, temFiltros && styles.filterBtnActive]} onPress={() => setModalFiltros(true)}>
+                        <Ionicons name="options-outline" size={20} color="#FFFFFF" />
+                        {temFiltros && <View style={styles.filterBadge}><Text style={styles.filterBadgeText}>{filtrosAtivos.length}</Text></View>}
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.addBtn} onPress={startCreating}>
+                        <Ionicons name="add" size={22} color="#FFFFFF" />
+                    </TouchableOpacity>
+                </View>
             </View>
+
+            {/* Modal de Filtros */}
+            <Modal visible={modalFiltros} transparent animationType="slide" onRequestClose={() => setModalFiltros(false)}>
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setModalFiltros(false)} />
+                <View style={styles.modalSheet}>
+                    <View style={styles.modalHandle} />
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Filtros</Text>
+                        {temFiltros && (
+                            <TouchableOpacity onPress={() => { limparFiltros(); setModalFiltros(false); }}>
+                                <Text style={styles.modalClear}>Limpar tudo</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
+                    <Text style={styles.filterLabel}>Residente</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+                        <TouchableOpacity style={[styles.filterChip, filtroResidente === undefined && styles.filterChipActive]} onPress={() => setFiltroResidente(undefined)}>
+                            <Text style={[styles.filterChipText, filtroResidente === undefined && styles.filterChipTextActive]}>Todos</Text>
+                        </TouchableOpacity>
+                        {residentes.map(r => (
+                            <TouchableOpacity key={r} style={[styles.filterChip, filtroResidente === r && styles.filterChipActive]} onPress={() => setFiltroResidente(filtroResidente === r ? undefined : r)}>
+                                <Text style={[styles.filterChipText, filtroResidente === r && styles.filterChipTextActive]} numberOfLines={1}>{r.replace(/^(Sr\.|Sra\.) /, '')}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    <Text style={styles.filterLabel}>Período</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+                        <TouchableOpacity style={[styles.filterChip, filtroPeriodo === undefined && styles.filterChipActive]} onPress={() => setFiltroPeriodo(undefined)}>
+                            <Text style={[styles.filterChipText, filtroPeriodo === undefined && styles.filterChipTextActive]}>Todos</Text>
+                        </TouchableOpacity>
+                        {periodos.map(p => (
+                            <TouchableOpacity key={p} style={[styles.filterChip, filtroPeriodo === p && styles.filterChipActive]} onPress={() => setFiltroPeriodo(filtroPeriodo === p ? undefined : p)}>
+                                <Ionicons name={periodMeta[p].icon} size={13} color={filtroPeriodo === p ? '#FFFFFF' : '#9CA3AF'} style={{ marginRight: 4 }} />
+                                <Text style={[styles.filterChipText, filtroPeriodo === p && styles.filterChipTextActive]}>{periodMeta[p].label}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    <Text style={styles.filterLabel}>Status</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+                        <TouchableOpacity style={[styles.filterChip, filtroStatus === undefined && styles.filterChipActive]} onPress={() => setFiltroStatus(undefined)}>
+                            <Text style={[styles.filterChipText, filtroStatus === undefined && styles.filterChipTextActive]}>Todos</Text>
+                        </TouchableOpacity>
+                        {(Object.keys(statusMeta) as ActivityStatus[]).map(s => (
+                            <TouchableOpacity key={s} style={[styles.filterChip, filtroStatus === s && styles.filterChipActive]} onPress={() => setFiltroStatus(filtroStatus === s ? undefined : s)}>
+                                <Text style={[styles.filterChipText, filtroStatus === s && styles.filterChipTextActive]}>{statusMeta[s].label}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    <TouchableOpacity style={styles.modalApplyBtn} onPress={() => setModalFiltros(false)}>
+                        <Text style={styles.modalApplyText}>Aplicar{temFiltros ? ` (${filtrosAtivos.length} ativo${filtrosAtivos.length > 1 ? 's' : ''})` : ''}</Text>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
 
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Navegação de datas */}
@@ -329,61 +394,18 @@ export const AgendaPage: React.FC = () => {
                     <View style={styles.summaryCard}><Text style={[styles.summaryNum, { color: '#B45309' }]}>{pendingCount}</Text><Text style={styles.summaryLabel}>Pendentes</Text></View>
                 </View>
 
-                {/* ── Filtros Sprint 3 ── */}
-                <View style={styles.filtersSection}>
-                    {/* Filtro por Residente */}
-                    <Text style={styles.filterLabel}>Residente</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-                        <TouchableOpacity style={[styles.filterChip, filtroResidente === undefined && styles.filterChipActive]} onPress={() => setFiltroResidente(undefined)}>
-                            <Text style={[styles.filterChipText, filtroResidente === undefined && styles.filterChipTextActive]}>Todos</Text>
+                {/* Chips de filtros ativos compactos */}
+                {temFiltros && (
+                    <View style={styles.activeFiltersRow}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
+                            {filtrosAtivos.map(f => <ChipFiltro key={f.key} label={f.label} onRemove={f.onRemove} />)}
+                        </ScrollView>
+                        <TouchableOpacity style={styles.clearBtn} onPress={limparFiltros}>
+                            <Ionicons name="close-circle" size={14} color="#EF4444" />
+                            <Text style={styles.clearBtnText}>Limpar</Text>
                         </TouchableOpacity>
-                        {residentes.map(r => (
-                            <TouchableOpacity key={r} style={[styles.filterChip, filtroResidente === r && styles.filterChipActive]} onPress={() => setFiltroResidente(filtroResidente === r ? undefined : r)}>
-                                <Text style={[styles.filterChipText, filtroResidente === r && styles.filterChipTextActive]} numberOfLines={1}>{r.replace(/^(Sr\.|Sra\.) /, '')}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-
-                    {/* Filtro por Período */}
-                    <Text style={styles.filterLabel}>Período</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-                        <TouchableOpacity style={[styles.filterChip, filtroPeriodo === undefined && styles.filterChipActive]} onPress={() => setFiltroPeriodo(undefined)}>
-                            <Text style={[styles.filterChipText, filtroPeriodo === undefined && styles.filterChipTextActive]}>Todos</Text>
-                        </TouchableOpacity>
-                        {periodos.map(p => (
-                            <TouchableOpacity key={p} style={[styles.filterChip, filtroPeriodo === p && styles.filterChipActive]} onPress={() => setFiltroPeriodo(filtroPeriodo === p ? undefined : p)}>
-                                <Ionicons name={periodMeta[p].icon} size={13} color={filtroPeriodo === p ? '#FFFFFF' : '#9CA3AF'} style={{ marginRight: 4 }} />
-                                <Text style={[styles.filterChipText, filtroPeriodo === p && styles.filterChipTextActive]}>{periodMeta[p].label}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-
-                    {/* Filtro por Status */}
-                    <Text style={styles.filterLabel}>Status</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-                        <TouchableOpacity style={[styles.filterChip, filtroStatus === undefined && styles.filterChipActive]} onPress={() => setFiltroStatus(undefined)}>
-                            <Text style={[styles.filterChipText, filtroStatus === undefined && styles.filterChipTextActive]}>Todos</Text>
-                        </TouchableOpacity>
-                        {(Object.keys(statusMeta) as ActivityStatus[]).map(s => (
-                            <TouchableOpacity key={s} style={[styles.filterChip, filtroStatus === s && styles.filterChipActive]} onPress={() => setFiltroStatus(filtroStatus === s ? undefined : s)}>
-                                <Text style={[styles.filterChipText, filtroStatus === s && styles.filterChipTextActive]}>{statusMeta[s].label}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-
-                    {/* Chips de filtros ativos + Limpar */}
-                    {temFiltros && (
-                        <View style={styles.activeFiltersRow}>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
-                                {filtrosAtivos.map(f => <ChipFiltro key={f.key} label={f.label} onRemove={f.onRemove} />)}
-                            </ScrollView>
-                            <TouchableOpacity style={styles.clearBtn} onPress={limparFiltros}>
-                                <Ionicons name="close-circle" size={14} color="#EF4444" />
-                                <Text style={styles.clearBtnText}>Limpar</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                </View>
+                    </View>
+                )}
 
                 {/* Atividades por período */}
                 {activitiesForDay.length === 0 ? (
@@ -437,15 +459,20 @@ const styles = StyleSheet.create({
     summaryCard: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 14, padding: 12, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
     summaryNum: { fontSize: 22, fontWeight: '700', color: '#059669' },
     summaryLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '500', marginTop: 2 },
-    // Filtros Sprint 3
-    filtersSection: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 },
-    filterLabel: { fontSize: 12, fontWeight: '600', color: '#6B7280', marginBottom: 8, marginTop: 10 },
-    filterRow: { gap: 8, paddingRight: 20, marginBottom: 4 },
-    filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' },
-    filterChipActive: { backgroundColor: '#8297D9', borderColor: '#8297D9' },
-    filterChipText: { fontSize: 12, fontWeight: '500', color: '#6B7280' },
-    filterChipTextActive: { color: '#FFFFFF' },
-    activeFiltersRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+    filterBtnActive: { backgroundColor: '#212B48' },
+    filterBadge: { position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 8, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center' },
+    filterBadgeText: { fontSize: 9, fontWeight: '700', color: '#FFFFFF' },
+    // Modal de filtros
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+    modalSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
+    modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB', alignSelf: 'center', marginBottom: 16 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    modalTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937' },
+    modalClear: { fontSize: 14, fontWeight: '600', color: '#EF4444' },
+    modalApplyBtn: { backgroundColor: '#8297D9', borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
+    modalApplyText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+    // Chips ativos inline
+    activeFiltersRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
     clearBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#FEE2E2', borderRadius: 20, marginLeft: 8 },
     clearBtnText: { fontSize: 12, fontWeight: '600', color: '#EF4444' },
     // Lista
