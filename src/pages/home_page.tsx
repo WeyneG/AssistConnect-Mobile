@@ -149,6 +149,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onLogout, onVerPerfil }) => 
 
             <ScrollView
                 style={styles.content}
+                contentContainerStyle={{ paddingTop: 20 }}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8297D9']} tintColor="#8297D9" />
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
         alignItems: 'center', justifyContent: 'center',
     },
-    content: { flex: 1, marginTop: -10 },
+    content: { flex: 1 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 100 },
     loadingText: { marginTop: 16, fontSize: 15, color: '#6B7280', fontWeight: '500' },
     errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40, paddingVertical: 100 },
@@ -321,7 +322,7 @@ const styles = StyleSheet.create({
     errorMessage: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 },
     retryButton: { marginTop: 24, backgroundColor: '#8297D9', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12 },
     retryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-    statsContainer: { flexDirection: 'row', paddingHorizontal: 20, marginTop: 20, gap: 12 },
+    statsContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 12 },
     statCard: {
         flex: 1, backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16, alignItems: 'center',
         shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2,
