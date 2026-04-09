@@ -90,12 +90,13 @@ const ChipFiltro: React.FC<{ label: string; onRemove: () => void }> = ({ label, 
 
 const chipStyles = StyleSheet.create({
     container: {
-        flexDirection: 'row', alignItems: 'center', gap: 4,
+        flexDirection: 'row', alignItems: 'center',
         backgroundColor: '#EEF2FF', borderRadius: 20,
         paddingHorizontal: 10, paddingVertical: 5,
         borderWidth: 1, borderColor: '#8297D9',
+        marginRight: 8,
     },
-    label: { fontSize: 12, fontWeight: '600', color: '#8297D9' },
+    label: { fontSize: 12, fontWeight: '600', color: '#8297D9', marginRight: 4 },
 });
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -397,7 +398,7 @@ export const AgendaPage: React.FC = () => {
                 {/* Chips de filtros ativos compactos */}
                 {temFiltros && (
                     <View style={styles.activeFiltersRow}>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 8 }}>
                             {filtrosAtivos.map(f => <ChipFiltro key={f.key} label={f.label} onRemove={f.onRemove} />)}
                         </ScrollView>
                         <TouchableOpacity style={styles.clearBtn} onPress={limparFiltros}>
@@ -459,6 +460,13 @@ const styles = StyleSheet.create({
     summaryCard: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 14, padding: 12, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
     summaryNum: { fontSize: 22, fontWeight: '700', color: '#059669' },
     summaryLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '500', marginTop: 2 },
+    // Filtros no modal
+    filterLabel: { fontSize: 12, fontWeight: '700', color: '#6B7280', marginBottom: 8, marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
+    filterRow: { flexDirection: 'row', flexWrap: 'wrap', paddingBottom: 4 },
+    filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB', marginRight: 8, marginBottom: 8 },
+    filterChipActive: { backgroundColor: '#8297D9', borderColor: '#8297D9' },
+    filterChipText: { fontSize: 13, fontWeight: '500', color: '#6B7280' },
+    filterChipTextActive: { color: '#FFFFFF' },
     filterBtnActive: { backgroundColor: '#212B48' },
     filterBadge: { position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 8, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center' },
     filterBadgeText: { fontSize: 9, fontWeight: '700', color: '#FFFFFF' },
@@ -473,7 +481,7 @@ const styles = StyleSheet.create({
     modalApplyText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
     // Chips ativos inline
     activeFiltersRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-    clearBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#FEE2E2', borderRadius: 20, marginLeft: 8 },
+    clearBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#FEE2E2', borderRadius: 20, marginLeft: 8 },
     clearBtnText: { fontSize: 12, fontWeight: '600', color: '#EF4444' },
     // Lista
     periodSection: { paddingHorizontal: 20, marginTop: 16 },
