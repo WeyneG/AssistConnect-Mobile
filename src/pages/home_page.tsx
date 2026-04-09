@@ -15,8 +15,6 @@ import { BottomTabBar } from '../components/BottomTabBar';
 import { ElderlyListScreen } from './elderly_list';
 import { AgendaPage } from './agenda_page';
 
-import { FiltrosAtividade } from '../services/api';
-
 interface HomePageProps {
     onLogout: () => void;
     onVerPerfil: (idosoId: number) => void;
