@@ -27,30 +27,30 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-const handleLogin = async () => {
-  if (!email || !password) {
-    Alert.alert('Erro', 'Por favor, preencha todos os campos');
-    return;
-  }
-
-  try {
-    setIsLoading(true);
-
-    const result = await login(email, password);
-
-    setIsLoading(false);
-
-    if (result.token) {
-      onLoginSuccess(result.token);
-    } else {
-      Alert.alert('Erro', 'Email ou senha inv├ílidos');
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Erro', 'Por favor, preencha todos os campos');
+      return;
     }
 
-  } catch (error) {
-    setIsLoading(false);
-    Alert.alert('Erro', 'N├úo foi poss├¡vel conectar ao servidor');
-  }
-};
+    try {
+      setIsLoading(true);
+
+      const result = await login(email, password);
+
+      setIsLoading(false);
+
+      if (result.token) {
+        onLoginSuccess(result.token);
+      } else {
+        Alert.alert('Erro', 'Email ou senha inválidos');
+      }
+
+    } catch (error) {
+      setIsLoading(false);
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor');
+    }
+  };
 
   const handleDemoAccess = () => {
     if (onDemoAccess) {
@@ -120,7 +120,7 @@ const handleLogin = async () => {
               <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, styles.passwordInput]}
-                placeholder="ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó"
+                placeholder="••••••••"
                 placeholderTextColor="#9CA3AF"
                 value={password}
                 onChangeText={setPassword}
@@ -174,7 +174,7 @@ const handleLogin = async () => {
 
         {/* Sign Up Link */}
         <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>N├úo tem uma conta? </Text>
+          <Text style={styles.signUpText}>Não tem uma conta? </Text>
           <TouchableOpacity onPress={onSignUp}>
             <Text style={styles.signUpLink}>Criar conta</Text>
           </TouchableOpacity>
