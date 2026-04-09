@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -18,37 +18,55 @@ interface LoginScreenProps {
   onLoginSuccess: (token: string) => void;
   onForgotPassword: () => void;
   onSignUp: () => void;
+  onDemoAccess?: () => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForgotPassword, onSignUp }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForgotPassword, onSignUp, onDemoAccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos');
+const handleLogin = async () => {
+  if (!email || !password) {
+    Alert.alert('Erro', 'Por favor, preencha todos os campos');
+    return;
+  }
+
+  try {
+    setIsLoading(true);
+
+    const result = await login(email, password);
+
+    setIsLoading(false);
+
+    if (result.token) {
+      onLoginSuccess(result.token);
+    } else {
+      Alert.alert('Erro', 'Email ou senha inv├ílidos');
+    }
+
+  } catch (error) {
+    setIsLoading(false);
+    Alert.alert('Erro', 'N├úo foi poss├¡vel conectar ao servidor');
+  }
+};
+
+  const handleDemoAccess = () => {
+    if (onDemoAccess) {
+      onDemoAccess();
       return;
     }
 
-    try {
-      setIsLoading(true);
+    onLoginSuccess('demo-token');
+  };
 
-      const result = await login(email, password);
+  const handleForgotPasswordPress = () => {
+    onForgotPassword();
+  };
 
-      setIsLoading(false);
-
-      if (result.token) {
-        onLoginSuccess(result.token);
-      } else {
-        Alert.alert('Erro', 'Email ou senha inválidos');
-      }
-
-    } catch (error) {
-      setIsLoading(false);
-      Alert.alert('Erro', 'Não foi possível conectar ao servidor');
-    }
+  const handleSignUpPress = () => {
+    onSignUp();
   };
 
   return (
@@ -102,7 +120,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
               <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, styles.passwordInput]}
-                placeholder="••••••••"
+                placeholder="ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó"
                 placeholderTextColor="#9CA3AF"
                 value={password}
                 onChangeText={setPassword}
@@ -143,11 +161,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
               </>
             )}
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.demoButton}
+            onPress={handleDemoAccess}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="play-circle-outline" size={18} color="#8297D9" />
+            <Text style={styles.demoButtonText}>Entrar sem backend</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Sign Up Link */}
         <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Não tem uma conta? </Text>
+          <Text style={styles.signUpText}>N├úo tem uma conta? </Text>
           <TouchableOpacity onPress={onSignUp}>
             <Text style={styles.signUpLink}>Criar conta</Text>
           </TouchableOpacity>
@@ -293,6 +320,23 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  demoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 12,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    backgroundColor: '#FFFFFF',
+  },
+  demoButtonText: {
+    color: '#8297D9',
+    fontSize: 15,
+    fontWeight: '700',
   },
   signUpContainer: {
     flexDirection: 'row',
