@@ -8,6 +8,7 @@ import { buscarIdosoPorId, Idoso } from '../services/api';
 
 interface PerfilIdosoPageProps {
     idosoId: number;
+    token?: string;
     onBack: () => void;
 }
 
@@ -139,20 +140,31 @@ const infoStyles = StyleSheet.create({
     },
 });
 
-export const PerfilIdosoPage: React.FC<PerfilIdosoPageProps> = ({ idosoId, onBack }) => {
+export const PerfilIdosoPage: React.FC<PerfilIdosoPageProps> = ({ idosoId, token, onBack }) => {
     const [idoso, setIdoso] = useState<Idoso | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        if (!token) {
+            console.error('❌ Tentativa de buscar idoso SEM TOKEN!');
+            setError('Token de autenticação ausente. Faça login novamente.');
+            setLoading(false);
+            return;
+        }
         carregarIdoso();
-    }, [idosoId]);
+    }, [idosoId, token]);
 
     const carregarIdoso = async () => {
+        if (!token) {
+            setError('Token de autenticação ausente. Faça login novamente.');
+            setLoading(false);
+            return;
+        }
         try {
             setError(null);
             setLoading(true);
-            const data = await buscarIdosoPorId(idosoId);
+            const data = await buscarIdosoPorId(idosoId, token);
             setIdoso(data);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Erro desconhecido');

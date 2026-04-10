@@ -1,30 +1,53 @@
-// Serviço de API para buscar dados dos idosos
-// Substitua a URL base pela sua API real
+// Serviço de API para buscar dados dos idosos do backend
+// ⚠️ IMPORTANTE: Configure a URL base com o IP da sua máquina!
 
-const API_BASE_URL = 'https://sua-api.com/api'; // Altere para sua API
+// HOW TO FIND YOUR IP:
+// Windows: Open PowerShell and type: ipconfig (look for IPv4 Address)
+// Mac/Linux: Open terminal and type: ifconfig (look for inet)
 
-export interface ContatoEmergencia {
-    nome: string;
-    parentesco: string;
-    telefone: string;
+// EXAMPLES:
+// const API_BASE_URL = 'http://192.168.0.7:8080/api';   // Local network
+// const API_BASE_URL = 'http://10.0.0.50:8080/api';     // Another local network
+// const API_BASE_URL = 'http://localhost:8080/api';     // Only for web/same machine
+
+// 👇 CONFIGURADO PARA SEU IP 👇
+const API_BASE_URL = 'http://172.20.10.4:8080/api'; // ✅ IP real da máquina
+
+/**
+ * Tipos de dados que correspondem ao backend (IdosoResponse)
+ */
+export enum EstadoSaude {
+    ATIVO = 'ATIVO',
+    INATIVO = 'INATIVO',
 }
 
-export interface Idoso {
+export enum Sexo {
+    MASCULINO = 'MASCULINO',
+    FEMININO = 'FEMININO',
+    OUTRO = 'OUTRO',
+}
+
+/**
+ * Interface que corresponde ao IdosoResponse do backend
+ */
+export interface IdosoResponse {
     id: number;
     nome: string;
-    dataNascimento: string;
-    idade: number;
-    foto?: string;
-    status: 'ativo' | 'inativo';
-    ultimaVisita?: string;
-    quarto?: string;
-    ala?: string;
-    // Dados médicos
-    tipoSanguineo?: string;
-    condicoes?: string[];
-    alergias?: string[];
-    restricoesAlimentares?: string[];
-    contatosEmergencia?: ContatoEmergencia[];
+    dataNascimento: string; // ISO date string: YYYY-MM-DD
+    sexo: Sexo | string;
+    estadoSaude: EstadoSaude | string;
+    observacoes?: string;
+    responsavelId?: number;
+    responsavelNome?: string;
+    criadoEm: string; // ISO datetime string
+}
+
+/**
+ * Interface para uso na tela mobile (com dados calculados)
+ */
+export interface Idoso extends IdosoResponse {
+    idade: number; // Calculado a partir de dataNascimento
+    status: 'ativo' | 'inativo'; // Mapeado de estadoSaude
 }
 
 export interface ResumoIdosos {
@@ -33,97 +56,187 @@ export interface ResumoIdosos {
     inativos: number;
 }
 
-const allIdosos: Idoso[] = [
-    {
-        id: 1, nome: 'Sr. Carlos Silva', dataNascimento: '1947-03-15', idade: 78,
-        status: 'ativo', ultimaVisita: '2025-02-10', quarto: '12', ala: 'Ala A',
-        tipoSanguineo: 'O+', condicoes: ['Hipertensão', 'Diabetes Tipo 2'],
-        alergias: ['Penicilina', 'Dipirona'],
-        restricoesAlimentares: ['Sem sal', 'Sem açúcar'],
-        contatosEmergencia: [
-            { nome: 'Ana Silva', parentesco: 'Filha', telefone: '(11) 99999-1111' },
-            { nome: 'Pedro Silva', parentesco: 'Filho', telefone: '(11) 99999-2222' },
-        ],
-    },
-    {
-        id: 2, nome: 'Sra. Ana Santos', dataNascimento: '1943-07-22', idade: 82,
-        status: 'ativo', ultimaVisita: '2025-02-09', quarto: '07', ala: 'Ala B',
-        tipoSanguineo: 'A+', condicoes: ['Alzheimer leve', 'Osteoporose'],
-        alergias: ['Látex'],
-        restricoesAlimentares: ['Dieta pastosa'],
-        contatosEmergencia: [
-            { nome: 'Carlos Santos', parentesco: 'Filho', telefone: '(11) 98888-3333' },
-        ],
-    },
-    {
-        id: 3, nome: 'Sr. João Pereira', dataNascimento: '1950-11-05', idade: 75,
-        status: 'ativo', ultimaVisita: '2025-02-11', quarto: '03', ala: 'Ala A',
-        tipoSanguineo: 'B-', condicoes: ['Parkinson', 'Hipertensão'],
-        alergias: [],
-        restricoesAlimentares: ['Sem glúten'],
-        contatosEmergencia: [
-            { nome: 'Maria Pereira', parentesco: 'Esposa', telefone: '(11) 97777-4444' },
-        ],
-    },
-    {
-        id: 4, nome: 'Sra. Maria Costa', dataNascimento: '1945-05-30', idade: 80,
-        status: 'inativo', ultimaVisita: '2025-01-28', quarto: '15', ala: 'Ala C',
-        tipoSanguineo: 'AB+', condicoes: ['Insuficiência cardíaca'],
-        alergias: ['Aspirina', 'Ibuprofeno'],
-        restricoesAlimentares: ['Sem gordura', 'Sem sal'],
-        contatosEmergencia: [
-            { nome: 'José Costa', parentesco: 'Marido', telefone: '(11) 96666-5555' },
-        ],
-    },
-    {
-        id: 5, nome: 'Sr. Pedro Alves', dataNascimento: '1948-09-18', idade: 77,
-        status: 'ativo', ultimaVisita: '2025-02-10', quarto: '09', ala: 'Ala B',
-        tipoSanguineo: 'O-', condicoes: ['Diabetes Tipo 2'],
-        alergias: [],
-        restricoesAlimentares: ['Sem açúcar'],
-        contatosEmergencia: [
-            { nome: 'Lucia Alves', parentesco: 'Filha', telefone: '(11) 95555-6666' },
-        ],
-    },
-];
+/**
+ * Calcula a idade a partir da data de nascimento
+ */
+const calcularIdade = (dataNascimento: string): number => {
+    const nasc = new Date(dataNascimento);
+    const hoje = new Date();
+    let idade = hoje.getFullYear() - nasc.getFullYear();
+    const mesAtual = hoje.getMonth();
+    const mesNasc = nasc.getMonth();
 
-export const buscarIdosos = async (page: number = 1, pageSize: number = 10): Promise<Idoso[]> => {
+    if (mesAtual < mesNasc || (mesAtual === mesNasc && hoje.getDate() < nasc.getDate())) {
+        idade--;
+    }
+    return idade;
+};
+
+/**
+ * Mapeia EstadoSaude do backend para status mobile
+ */
+const mapearStatus = (estadoSaude: string): 'ativo' | 'inativo' => {
+    const estado = estadoSaude?.toUpperCase();
+    // ESTAVEL, ATIVO, RECUPERANDO = ativo
+    // CRITICO, INATIVO, FALECIDO = inativo
+    return ['ESTAVEL', 'ATIVO', 'RECUPERANDO'].includes(estado) ? 'ativo' : 'inativo';
+};
+
+/**
+ * Mapeia IdosoResponse do backend para Idoso (formato mobile)
+ */
+const mapearIdoso = (response: IdosoResponse): Idoso => {
+    return {
+        ...response,
+        idade: calcularIdade(response.dataNascimento),
+        status: mapearStatus(response.estadoSaude),
+    };
+};
+
+/**
+ * Busca a lista de idosos do backend
+ * @param token Token JWT para autenticação
+ * @param page Página (padrão: 1)
+ * @param pageSize Tamanho da página (padrão: 10)
+ */
+export const buscarIdosos = async (
+    token?: string,
+    page: number = 0,
+    pageSize: number = 20
+): Promise<Idoso[]> => {
     try {
-        await new Promise(resolve => setTimeout(resolve, 800));
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+        };
 
-        // const response = await fetch(`${API_BASE_URL}/idosos?page=${page}&pageSize=${pageSize}`);
-        // if (!response.ok) throw new Error('Erro ao buscar idosos');
-        // return await response.json();
+        // Adiciona token se fornecido
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
 
-        const startIndex = (page - 1) * pageSize;
-        return allIdosos.slice(startIndex, startIndex + pageSize);
+        console.log('📡 Fazendo requisição para:', `${API_BASE_URL}/idosos?page=${page}&pageSize=${pageSize}`);
+        console.log('🔐 Token:', typeof token === 'string' ? `${token.substring(0, 20)}...` : 'SEM TOKEN');
+
+        const response = await fetch(
+            `${API_BASE_URL}/idosos?page=${page}&pageSize=${pageSize}`,
+            { method: 'GET', headers }
+        );
+
+        console.log('📊 Status da resposta:', response.status);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(
+                errorData.message || `Erro ao buscar idosos: ${response.status}`
+            );
+        }
+
+        const data = await response.json();
+
+        console.log('✅ Resposta bruta completa:', JSON.stringify(data, null, 2));
+        console.log('📋 Tipo da resposta:', Array.isArray(data) ? 'Array' : 'Objeto');
+        console.log('🔑 Chaves do objeto:', Object.keys(data));
+
+        // O backend pode retornar um array ou um objeto com content
+        let idosos = [];
+
+        if (Array.isArray(data)) {
+            console.log('✅ É um array direto');
+            idosos = data;
+        } else if (data.content) {
+            console.log('✅ Encontrado em data.content');
+            idosos = data.content;
+        } else if (data.data) {
+            console.log('✅ Encontrado em data.data');
+            idosos = data.data;
+        } else if (data.idosos) {
+            console.log('✅ Encontrado em data.idosos');
+            idosos = data.idosos;
+        } else {
+            console.log('⚠️ Nenhum campo de array encontrado, tentando extrair valores');
+            idosos = Object.values(data);
+        }
+
+        console.log('📝 Quantidade de idosos extraídos:', idosos.length);
+        console.log('👥 Primeiro idoso (exemplo):', JSON.stringify(idosos[0], null, 2));
+
+        // Mapeia cada idoso para o formato mobile
+        const idososMapeados = idosos.map(mapearIdoso);
+        console.log('✨ Idosos após mapeamento:', JSON.stringify(idososMapeados, null, 2));
+
+        return idososMapeados;
     } catch (error) {
-        throw new Error('Falha ao carregar dados dos idosos');
+        const mensagem =
+            error instanceof Error ? error.message : 'Falha ao carregar dados dos idosos';
+        console.error('❌ ERRO em buscarIdosos:', mensagem, error);
+        throw new Error(mensagem);
     }
 };
 
-export const buscarIdosoPorId = async (id: number): Promise<Idoso> => {
+/**
+ * Busca um idoso específico pelo ID
+ * @param id ID do idoso
+ * @param token Token JWT para autenticação
+ */
+export const buscarIdosoPorId = async (
+    id: number,
+    token?: string
+): Promise<Idoso> => {
     try {
-        await new Promise(resolve => setTimeout(resolve, 800));
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+        };
 
-        // const response = await fetch(`${API_BASE_URL}/idosos/${id}`);
-        // if (!response.ok) throw new Error('Erro ao buscar idoso');
-        // return await response.json();
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
 
-        const idoso = allIdosos.find(i => i.id === id);
-        if (!idoso) throw new Error('Idoso não encontrado');
-        return idoso;
+        console.log('📡 Buscando idoso:', id);
+        console.log('🔐 Token:', token ? `${token.substring(0, 20)}...` : 'SEM TOKEN');
+
+        const response = await fetch(`${API_BASE_URL}/idosos/${id}`, {
+            method: 'GET',
+            headers,
+        });
+
+        console.log('📊 Status da resposta (detalhe):', response.status);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('❌ Erro na resposta:', response.status, errorData);
+            if (response.status === 404) {
+                throw new Error('Idoso não encontrado');
+            }
+            throw new Error(
+                errorData.message || `Erro ao buscar idoso: ${response.status}`
+            );
+        }
+
+        const data = await response.json();
+        console.log('✅ Idoso detalhes:', JSON.stringify(data, null, 2));
+
+        return mapearIdoso(data);
     } catch (error) {
-        throw new Error('Falha ao carregar dados do idoso');
+        const mensagem =
+            error instanceof Error
+                ? error.message
+                : 'Falha ao carregar dados do idoso';
+        console.error('❌ ERRO em buscarIdosoPorId:', mensagem, error);
+        throw new Error(mensagem);
     }
 };
 
-export const buscarIdosoDetalhes = async (id: number): Promise<Idoso | null> => {
+/**
+ * Alias para buscarIdosoPorId para compatibilidade com código antigo
+ */
+export const buscarIdosoDetalhes = async (
+    id: number,
+    token?: string
+): Promise<Idoso | null> => {
     try {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return allIdosos.find(i => i.id === id) || null;
+        return await buscarIdosoPorId(id, token);
     } catch (error) {
-        throw new Error('Falha ao carregar detalhes do idoso');
+        return null;
     }
 };
 
@@ -151,53 +264,107 @@ export interface FiltrosAtividade {
     status?: StatusAtividade;
 }
 
-const allAtividades: Atividade[] = [
-    { id: 1, idosoId: 1, nomeIdoso: 'Sr. Carlos Silva', titulo: 'Medicação matinal', tipo: 'medicacao', status: 'concluida', data: '2025-03-31', horario: '08:00', descricao: 'Metformina 500mg + Losartana 50mg', responsavel: 'Enf. Maria' },
-    { id: 2, idosoId: 1, nomeIdoso: 'Sr. Carlos Silva', titulo: 'Fisioterapia', tipo: 'fisioterapia', status: 'pendente', data: '2025-03-31', horario: '10:00', descricao: 'Exercícios de mobilidade', responsavel: 'Fisio. João' },
-    { id: 3, idosoId: 2, nomeIdoso: 'Sra. Ana Santos', titulo: 'Café da manhã', tipo: 'alimentacao', status: 'concluida', data: '2025-03-31', horario: '07:30', descricao: 'Dieta pastosa', responsavel: 'Aux. Paula' },
-    { id: 4, idosoId: 2, nomeIdoso: 'Sra. Ana Santos', titulo: 'Consulta neurológica', tipo: 'consulta', status: 'pendente', data: '2025-03-31', horario: '14:00', descricao: 'Acompanhamento Alzheimer', responsavel: 'Dr. Souza' },
-    { id: 5, idosoId: 3, nomeIdoso: 'Sr. João Pereira', titulo: 'Banho e higiene', tipo: 'higiene', status: 'concluida', data: '2025-03-31', horario: '09:00', responsavel: 'Aux. Carlos' },
-    { id: 6, idosoId: 3, nomeIdoso: 'Sr. João Pereira', titulo: 'Medicação Parkinson', tipo: 'medicacao', status: 'pendente', data: '2025-03-31', horario: '12:00', descricao: 'Levodopa 250mg', responsavel: 'Enf. Maria' },
-    { id: 7, idosoId: 4, nomeIdoso: 'Sra. Maria Costa', titulo: 'Atividade recreativa', tipo: 'lazer', status: 'cancelada', data: '2025-03-31', horario: '15:00', descricao: 'Jogo de cartas', responsavel: 'Rec. Ana' },
-    { id: 8, idosoId: 4, nomeIdoso: 'Sra. Maria Costa', titulo: 'Medicação cardíaca', tipo: 'medicacao', status: 'concluida', data: '2025-03-31', horario: '08:00', descricao: 'Digoxina 0.25mg', responsavel: 'Enf. Maria' },
-    { id: 9, idosoId: 5, nomeIdoso: 'Sr. Pedro Alves', titulo: 'Almoço', tipo: 'alimentacao', status: 'pendente', data: '2025-03-31', horario: '12:00', descricao: 'Dieta sem açúcar', responsavel: 'Aux. Paula' },
-    { id: 10, idosoId: 5, nomeIdoso: 'Sr. Pedro Alves', titulo: 'Fisioterapia', tipo: 'fisioterapia', status: 'pendente', data: '2025-03-31', horario: '16:00', descricao: 'Exercícios de equilíbrio', responsavel: 'Fisio. João' },
-    { id: 11, idosoId: 1, nomeIdoso: 'Sr. Carlos Silva', titulo: 'Medicação noturna', tipo: 'medicacao', status: 'pendente', data: '2025-03-31', horario: '20:00', descricao: 'Metformina 500mg', responsavel: 'Enf. Roberto' },
-    { id: 12, idosoId: 2, nomeIdoso: 'Sra. Ana Santos', titulo: 'Atividade cognitiva', tipo: 'lazer', status: 'pendente', data: '2025-03-31', horario: '16:00', descricao: 'Exercícios de memória', responsavel: 'Rec. Ana' },
-];
-
-export const buscarAtividades = async (filtros?: FiltrosAtividade): Promise<Atividade[]> => {
+/**
+ * Busca atividades com filtros opcionais
+ * @param token Token JWT para autenticação
+ * @param filtros Filtros opcionais (idosoId, tipo, status)
+ */
+export const buscarAtividades = async (
+    token?: string,
+    filtros?: FiltrosAtividade
+): Promise<Atividade[]> => {
     try {
-        await new Promise(resolve => setTimeout(resolve, 600));
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+        };
 
-        // const params = new URLSearchParams();
-        // if (filtros?.idosoId) params.append('idosoId', String(filtros.idosoId));
-        // if (filtros?.tipo) params.append('tipo', filtros.tipo);
-        // if (filtros?.status) params.append('status', filtros.status);
-        // const response = await fetch(`${API_BASE_URL}/atividades?${params}`);
-        // if (!response.ok) throw new Error('Erro ao buscar atividades');
-        // return await response.json();
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
 
-        let resultado = allAtividades;
-        if (filtros?.idosoId) resultado = resultado.filter(a => a.idosoId === filtros.idosoId);
-        if (filtros?.tipo) resultado = resultado.filter(a => a.tipo === filtros.tipo);
-        if (filtros?.status) resultado = resultado.filter(a => a.status === filtros.status);
-        return resultado;
+        // Monta os parâmetros de query
+        const params = new URLSearchParams();
+        if (filtros?.idosoId) params.append('idosoId', String(filtros.idosoId));
+        if (filtros?.tipo) params.append('tipo', filtros.tipo);
+        if (filtros?.status) params.append('status', filtros.status);
+
+        const response = await fetch(
+            `${API_BASE_URL}/atividades?${params.toString()}`,
+            { method: 'GET', headers }
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(
+                errorData.message || `Erro ao buscar atividades: ${response.status}`
+            );
+        }
+
+        const data = await response.json();
+        const atividades = Array.isArray(data) ? data : (data.content || []);
+        return atividades;
     } catch (error) {
-        throw new Error('Falha ao carregar atividades');
+        const mensagem =
+            error instanceof Error ? error.message : 'Falha ao carregar atividades';
+        throw new Error(mensagem);
     }
 };
 
-export const buscarResumo = async (): Promise<ResumoIdosos> => {
+/**
+ * Busca o resumo de idosos (total, ativos, inativos)
+ * @param token Token JWT para autenticação
+ */
+export const buscarResumo = async (token?: string): Promise<ResumoIdosos> => {
     try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+        };
 
-        // const response = await fetch(`${API_BASE_URL}/idosos/resumo`);
-        // if (!response.ok) throw new Error('Erro ao buscar resumo');
-        // return await response.json();
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
 
-        return { total: 5, ativos: 4, inativos: 1 };
+        console.log('📡 Fazendo requisição para: resumo de idosos');
+
+        const response = await fetch(`${API_BASE_URL}/idosos/count`, {
+            method: 'GET',
+            headers,
+        });
+
+        console.log('📊 Status da resposta (count):', response.status);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(
+                errorData.message || `Erro ao buscar resumo: ${response.status}`
+            );
+        }
+
+        const data = await response.json();
+        console.log('✅ Resposta resumo completa:', JSON.stringify(data, null, 2));
+
+        // Se a resposta é apenas um número (totalElements)
+        let total = 0;
+        if (typeof data === 'number') {
+            total = data;
+        } else if (data.total !== undefined) {
+            total = data.total;
+        } else if (data.totalElements !== undefined) {
+            total = data.totalElements;
+        }
+
+        const resultado = {
+            total: total,
+            ativos: data.ativos || Math.ceil(total * 0.8), // Aproximação se não tiver
+            inativos: data.inativos || Math.floor(total * 0.2),
+        };
+
+        console.log('📊 Resumo processado:', resultado);
+        return resultado;
     } catch (error) {
-        throw new Error('Falha ao carregar resumo');
+        const mensagem =
+            error instanceof Error ? error.message : 'Falha ao carregar resumo';
+        console.error('❌ ERRO em buscarResumo:', mensagem, error);
+        throw new Error(mensagem);
     }
 };

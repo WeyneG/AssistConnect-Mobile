@@ -18,6 +18,7 @@ import { ElderlyProfileScreen } from './elderly_profile';
 import { BottomTabBar } from '../components/BottomTabBar';
 
 interface ElderlyListProps {
+    token?: string;
     onBack: () => void;
     onNavigateTab?: (tab: string) => void;
     activeTab?: string;
@@ -25,7 +26,7 @@ interface ElderlyListProps {
 
 type ViewMode = 'list' | 'profile';
 
-export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNavigateTab, activeTab = 'elderly' }) => {
+export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, onNavigateTab, activeTab = 'elderly' }) => {
     const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [selectedIdosoId, setSelectedIdosoId] = useState<number | null>(null);
 
@@ -92,13 +93,11 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
         try {
             setError(null);
             setLoading(true);
-            setCurrentPage(1);
-
-            const idososData = await buscarIdosos(1, pageSize);
+            setCurrentPage(0);
+            const idososData = await buscarIdosos(token, 0, pageSize);
             setIdosos(idososData);
             setTodosIdosos(idososData);
             setHasMore(idososData.length === pageSize);
-
             // Extrair quartos únicos e ordenar
             const quartos = Array.from(new Set(idososData.map(i => i.quarto))).sort();
             setAvailableRooms(quartos);
@@ -113,12 +112,10 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ onBack, onNaviga
 
     const carregarMais = async () => {
         if (loadingMore || !hasMore) return;
-
         try {
             setLoadingMore(true);
             const nextPage = currentPage + 1;
-            const novosDados = await buscarIdosos(nextPage, pageSize);
-
+            const novosDados = await buscarIdosos(token, nextPage, pageSize);
             if (novosDados.length === 0) {
                 setHasMore(false);
             } else {

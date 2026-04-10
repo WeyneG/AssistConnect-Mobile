@@ -1,20 +1,23 @@
-const API_URL = "http://192.168.0.7:8080/api";
+const API_URL = "http://172.20.10.4:8080/api";
 
 export async function login(email: string, password: string) {
-  // Mock temporário para testes — remover quando o backend estiver acessível
-  await new Promise(resolve => setTimeout(resolve, 800));
-  if (email && password) {
-    return { token: 'mock-token-123' };
-  }
-  return { token: null };
+  try {
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
 
-  // Chamada real (descomentar quando o backend estiver disponível):
-  // const response = await fetch(`${API_URL}/auth/login`, {
-  //   method: "POST",
-  //   headers: { "Content-Type": "application/json" },
-  //   body: JSON.stringify({ email, password }),
-  // });
-  // const data = await response.json();
-  // return data;
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Erro: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Login error:', error);
+    throw error;
+  }
 }
 
