@@ -176,6 +176,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, o
         return (
             <ElderlyProfileScreen
                 idosoId={selectedIdosoId}
+                token={token}
                 onBack={handleBackFromProfile}
                 onNavigateTab={onNavigateTab}
                 activeTab={activeTab}
