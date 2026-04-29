@@ -1,4 +1,4 @@
-const API_URL = "http://172.20.10.4:8080/api";
+const API_URL = "http://192.168.0.5:8080/api";
 
 export async function login(email: string, password: string) {
   try {

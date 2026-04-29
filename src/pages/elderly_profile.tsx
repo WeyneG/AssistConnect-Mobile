@@ -6,23 +6,27 @@ import {
     ScrollView,
     TouchableOpacity,
     ActivityIndicator,
+    Image,
     Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { buscarIdosoDetalhes, Idoso } from '../services/api';
+import * as ImagePicker from 'expo-image-picker';
+import { buscarIdosoPorId, uploadFotoIdoso, getFotoUri, Idoso } from '../services/api';
 import { BottomTabBar } from '../components/BottomTabBar';
 
 interface ElderlyProfileProps {
     idosoId: number;
+    token?: string;
     onBack: () => void;
     onNavigateTab?: (tab: string) => void;
     activeTab?: string;
 }
 
-export const ElderlyProfileScreen: React.FC<ElderlyProfileProps> = ({ idosoId, onBack, onNavigateTab, activeTab = 'elderly' }) => {
+export const ElderlyProfileScreen: React.FC<ElderlyProfileProps> = ({ idosoId, token, onBack, onNavigateTab, activeTab = 'elderly' }) => {
     const [idoso, setIdoso] = useState<Idoso | null>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     useEffect(() => {
         carregarDetalhes();
@@ -30,63 +34,67 @@ export const ElderlyProfileScreen: React.FC<ElderlyProfileProps> = ({ idosoId, o
 
     const carregarDetalhes = async () => {
         try {
-            setError(null);
             setLoading(true);
-            const dados = await buscarIdosoDetalhes(idosoId);
-            if (!dados) {
-                setError('Idoso não encontrado');
-            } else {
-                setIdoso(dados);
-            }
+            const dados = await buscarIdosoPorId(idosoId, token);
+            setIdoso(dados);
         } catch (err) {
-            const mensagemErro = err instanceof Error ? err.message : 'Erro desconhecido';
-            setError(mensagemErro);
+            Alert.alert('Erro', 'Não foi possível carregar os dados.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handlePickImage = async () => {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+            Alert.alert('Permissão necessária', 'Precisamos de acesso às suas fotos.');
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.5,
+        });
+
+        if (!result.canceled) {
+            const uri = result.assets[0].uri;
+            setPreviewImage(uri);
+            confirmarUpload(uri);
+        }
+    };
+
+    const confirmarUpload = (uri: string) => {
+        Alert.alert('Nova Foto', 'Deseja salvar esta imagem como foto de perfil?', [
+            { text: 'Cancelar', onPress: () => setPreviewImage(null), style: 'cancel' },
+            { text: 'Salvar', onPress: () => realizarUpload(uri) },
+        ]);
+    };
+
+    const realizarUpload = async (uri: string) => {
+        try {
+            setUploading(true);
+            await uploadFotoIdoso(idosoId, uri, token);
+            await carregarDetalhes(); // Recarrega para pegar a nova fotoUrl do backend
+            setPreviewImage(null);
+            Alert.alert('Sucesso', 'Foto atualizada!');
+        } catch (err) {
+            Alert.alert('Erro', 'Falha ao enviar a foto.');
+        } finally {
+            setUploading(false);
         }
     };
 
     if (loading) {
         return (
             <View style={styles.container}>
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={onBack}>
-                        <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Perfil</Text>
-                    <View style={{ width: 28 }} />
-                </View>
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#8297D9" />
-                    <Text style={styles.loadingText}>Carregando...</Text>
-                </View>
+                <ActivityIndicator size="large" color="#8297D9" style={{ flex: 1 }} />
             </View>
         );
     }
 
-    if (error || !idoso) {
-        return (
-            <View style={styles.container}>
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={onBack}>
-                        <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Perfil</Text>
-                    <View style={{ width: 28 }} />
-                </View>
-                <View style={styles.errorContainer}>
-                    <View style={styles.errorIcon}>
-                        <Ionicons name="alert-circle-outline" size={48} color="#8297D9" />
-                    </View>
-                    <Text style={styles.errorTitle}>Erro ao carregar</Text>
-                    <Text style={styles.errorMessage}>{error || 'Idoso não encontrado'}</Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={carregarDetalhes}>
-                        <Text style={styles.retryButtonText}>Tentar novamente</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-        );
-    }
+    const fotoUri = previewImage || getFotoUri(idoso?.fotoUrl);
 
     return (
         <View style={styles.container}>
@@ -95,296 +103,95 @@ export const ElderlyProfileScreen: React.FC<ElderlyProfileProps> = ({ idosoId, o
                 <TouchableOpacity onPress={onBack}>
                     <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Perfil</Text>
+                <Text style={styles.headerTitle}>Perfil do Idoso</Text>
                 <View style={{ width: 28 }} />
             </View>
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.content}>
                 {/* Avatar Section */}
                 <View style={styles.avatarSection}>
-                    <View style={styles.avatarLarge}>
-                        <Ionicons name="person" size={64} color="#8297D9" />
-                    </View>
-                    <Text style={styles.nomePrincipal}>{idoso.nome}</Text>
-                    <View style={[styles.statusLargeBadge, idoso.status === 'ativo' ? styles.statusAtivoLarge : styles.statusInativoLarge]}>
-                        <View style={[styles.statusDot, idoso.status === 'ativo' ? styles.statusDotAtivo : styles.statusDotInativo]} />
-                        <Text style={[styles.statusTextLarge, idoso.status === 'ativo' ? styles.statusTextAtivoLarge : styles.statusTextInativoLarge]}>
-                            {idoso.status === 'ativo' ? 'Ativo' : 'Inativo'}
-                        </Text>
-                    </View>
-                </View>
-
-                {/* Info Cards */}
-                <View style={styles.infoSection}>
-                    <View style={styles.infoCard}>
-                        <View style={styles.infoIconContainer}>
-                            <Ionicons name="calendar-outline" size={24} color="#8297D9" />
-                        </View>
-                        <View style={styles.infoContent}>
-                            <Text style={styles.infoLabel}>Idade</Text>
-                            <Text style={styles.infoValue}>{idoso.idade} anos</Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.infoCard}>
-                        <View style={styles.infoIconContainer}>
-                            <Ionicons name="home-outline" size={24} color="#8297D9" />
-                        </View>
-                        <View style={styles.infoContent}>
-                            <Text style={styles.infoLabel}>Quarto</Text>
-                            <Text style={styles.infoValue}>{idoso.quarto}</Text>
-                        </View>
-                    </View>
-
-                    {idoso.ultimaVisita && (
-                        <View style={styles.infoCard}>
-                            <View style={styles.infoIconContainer}>
-                                <Ionicons name="checkmark-circle-outline" size={24} color="#8297D9" />
-                            </View>
-                            <View style={styles.infoContent}>
-                                <Text style={styles.infoLabel}>Última Visita</Text>
-                                <Text style={styles.infoValue}>
-                                    {new Date(idoso.ultimaVisita).toLocaleDateString('pt-BR')}
-                                </Text>
+                    <TouchableOpacity onPress={handlePickImage} disabled={uploading}>
+                        <View style={styles.avatarWrapper}>
+                            {fotoUri ? (
+                                <Image source={{ uri: fotoUri }} style={styles.avatarImage} />
+                            ) : (
+                                <View style={styles.avatarPlaceholder}>
+                                    <Ionicons name="person" size={50} color="#8297D9" />
+                                </View>
+                            )}
+                            <View style={styles.cameraIcon}>
+                                <Ionicons name="camera" size={18} color="#FFFFFF" />
                             </View>
                         </View>
-                    )}
+                    </TouchableOpacity>
+                    {uploading && <Text style={styles.uploadingText}>Enviando...</Text>}
+                    <Text style={styles.nomePrincipal}>{idoso?.nome}</Text>
+                    <Text style={styles.idadeSub}>{idoso?.idade} anos</Text>
                 </View>
 
-                {/* Actions */}
-                <View style={styles.actionsSection}>
-                    <TouchableOpacity style={styles.actionButton}>
-                        <Ionicons name="document-text-outline" size={20} color="#8297D9" />
-                        <Text style={styles.actionButtonText}>Ver Relatórios</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.actionButton}>
-                        <Ionicons name="medical-outline" size={20} color="#8297D9" />
-                        <Text style={styles.actionButtonText}>Medicamentos</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.actionButton}>
-                        <Ionicons name="call-outline" size={20} color="#8297D9" />
-                        <Text style={styles.actionButtonText}>Contatar</Text>
-                    </TouchableOpacity>
+                {/* Seção de Saúde - Sprint 03 */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Saúde e Cuidados</Text>
+                    <View style={styles.card}>
+                        <View style={styles.cardItem}>
+                            <Ionicons name="pulse" size={20} color="#8297D9" />
+                            <View style={styles.cardText}>
+                                <Text style={styles.label}>Estado de Saúde</Text>
+                                <Text style={styles.value}>{idoso?.estadoSaude || 'Não informado'}</Text>
+                            </View>
+                        </View>
+                        <View style={styles.divider} />
+                        <View style={styles.cardItem}>
+                            <Ionicons name="document-text" size={20} color="#8297D9" />
+                            <View style={styles.cardText}>
+                                <Text style={styles.label}>Observações</Text>
+                                <Text style={styles.value}>{idoso?.observacoes || 'Nenhuma observação'}</Text>
+                            </View>
+                        </View>
+                    </View>
                 </View>
 
-                <View style={{ height: 40 }} />
+                {/* Seção de Contato - Sprint 03 */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Contato de Emergência</Text>
+                    <View style={styles.card}>
+                        <View style={styles.cardItem}>
+                            <Ionicons name="call" size={20} color="#8297D9" />
+                            <View style={styles.cardText}>
+                                <Text style={styles.label}>Responsável</Text>
+                                <Text style={styles.value}>{idoso?.responsavelNome || 'Não cadastrado'}</Text>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+
+                <View style={{ height: 100 }} />
             </ScrollView>
 
-            {/* Bottom Navigation */}
-            <BottomTabBar
-                activeTab={activeTab}
-                onTabPress={(tab) => {
-                    onBack();
-                    onNavigateTab?.(tab);
-                }}
-                tabs={[
-                    { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
-                    { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
-                    { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
-                    { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
-                ]}
-            />
+            <BottomTabBar activeTab="elderly" onTabPress={(tab) => { onBack(); onNavigateTab?.(tab); }} />
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F8FAFC',
-    },
-    header: {
-        backgroundColor: '#8297D9',
-        paddingTop: 50,
-        paddingBottom: 20,
-        paddingHorizontal: 20,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    headerTitle: {
-        fontSize: 28,
-        fontWeight: '700',
-        color: '#FFFFFF',
-        letterSpacing: -0.5,
-    },
-    content: {
-        flex: 1,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingText: {
-        marginTop: 16,
-        fontSize: 15,
-        color: '#6B7280',
-        fontWeight: '500',
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 40,
-    },
-    errorIcon: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#F3F4F6',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 16,
-    },
-    errorTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#1F2937',
-        marginBottom: 8,
-    },
-    errorMessage: {
-        fontSize: 14,
-        color: '#6B7280',
-        textAlign: 'center',
-        lineHeight: 20,
-    },
-    retryButton: {
-        marginTop: 24,
-        backgroundColor: '#8297D9',
-        paddingHorizontal: 32,
-        paddingVertical: 14,
-        borderRadius: 12,
-    },
-    retryButtonText: {
-        color: '#FFFFFF',
-        fontSize: 15,
-        fontWeight: '600',
-    },
-    avatarSection: {
-        alignItems: 'center',
-        paddingVertical: 32,
-    },
-    avatarLarge: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: '#EEF2FF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 3,
-    },
-    nomePrincipal: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#1F2937',
-        marginBottom: 12,
-        textAlign: 'center',
-    },
-    statusLargeBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        gap: 6,
-    },
-    statusAtivoLarge: {
-        backgroundColor: '#ECFDF5',
-    },
-    statusInativoLarge: {
-        backgroundColor: '#FEF3C7',
-    },
-    statusDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-    },
-    statusDotAtivo: {
-        backgroundColor: '#10B981',
-    },
-    statusDotInativo: {
-        backgroundColor: '#F59E0B',
-    },
-    statusTextLarge: {
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    statusTextAtivoLarge: {
-        color: '#059669',
-    },
-    statusTextInativoLarge: {
-        color: '#D97706',
-    },
-    infoSection: {
-        paddingHorizontal: 20,
-        gap: 12,
-        marginBottom: 24,
-    },
-    infoCard: {
-        flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
-    },
-    infoIconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: '#EEF2FF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 12,
-    },
-    infoContent: {
-        flex: 1,
-    },
-    infoLabel: {
-        fontSize: 12,
-        color: '#9CA3AF',
-        fontWeight: '500',
-        marginBottom: 4,
-    },
-    infoValue: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#1F2937',
-    },
-    actionsSection: {
-        paddingHorizontal: 20,
-        gap: 12,
-    },
-    actionButton: {
-        flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
-    },
-    actionButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#8297D9',
-        marginLeft: 12,
-    },
+    container: { flex: 1, backgroundColor: '#F8FAFC' },
+    header: { backgroundColor: '#8297D9', paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    headerTitle: { fontSize: 22, fontWeight: '700', color: '#FFFFFF' },
+    content: { flex: 1 },
+    avatarSection: { alignItems: 'center', paddingVertical: 30 },
+    avatarWrapper: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#FFFFFF', elevation: 5, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 },
+    avatarImage: { width: 100, height: 100, borderRadius: 50 },
+    avatarPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    cameraIcon: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#8297D9', width: 32, height: 32, borderRadius: 16, borderWith: 2, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+    nomePrincipal: { fontSize: 24, fontWeight: '700', color: '#1F2937', marginTop: 15 },
+    idadeSub: { fontSize: 16, color: '#6B7280' },
+    uploadingText: { marginTop: 10, color: '#8297D9', fontWeight: '600' },
+    section: { paddingHorizontal: 20, marginTop: 25 },
+    sectionTitle: { fontSize: 16, fontWeight: '700', color: '#374151', marginBottom: 10 },
+    card: { backgroundColor: '#FFFFFF', borderRadius: 15, padding: 15, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5 },
+    cardItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
+    cardText: { marginLeft: 15 },
+    label: { fontSize: 12, color: '#9CA3AF', textTransform: 'uppercase' },
+    value: { fontSize: 15, color: '#1F2937', fontWeight: '600' },
+    divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 10 },
 });
