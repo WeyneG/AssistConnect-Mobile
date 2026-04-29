@@ -23,7 +23,7 @@ interface HomePageProps {
     onVerPerfil: (idosoId: number) => void;
 }
 
-type NavigationPage = 'home' | 'elderly' | 'agenda' | 'profile';
+type NavigationPage = 'home' | 'elderly' | 'agenda' | 'reports' | 'profile';
 
 // ─── Tela de Perfil simples ───────────────────────────────────────────────────
 const PerfilTab: React.FC<{ onLogout: () => void; onNavigateTab: (tab: string) => void; activeTab: string }> = ({ onLogout, onNavigateTab, activeTab }) => (
@@ -49,6 +49,7 @@ const PerfilTab: React.FC<{ onLogout: () => void; onNavigateTab: (tab: string) =
                 { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
                 { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
                 { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
+                { key: 'reports', label: 'Relatórios', activeIcon: 'document-text', inactiveIcon: 'document-text-outline' },
                 { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
             ]}
         />
@@ -116,6 +117,31 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
                         { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
                         { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
                         { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
+                        { key: 'reports', label: 'Relatórios', activeIcon: 'document-text', inactiveIcon: 'document-text-outline' },
+                        { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
+                    ]}
+                />
+            </View>
+        );
+    }
+
+    // Mostrar relatórios
+    if (currentPage === 'reports') {
+        return (
+            <View style={{ flex: 1 }}>
+                <ReportsDashboard
+                    token={token}
+                    onNavigateTab={(tab) => setCurrentPage(tab as NavigationPage)}
+                    activeTab={currentPage}
+                />
+                <BottomTabBar
+                    activeTab={currentPage}
+                    onTabPress={(tab) => setCurrentPage(tab as NavigationPage)}
+                    tabs={[
+                        { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
+                        { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
+                        { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
+                        { key: 'reports', label: 'Relatórios', activeIcon: 'document-text', inactiveIcon: 'document-text-outline' },
                         { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
                     ]}
                 />
@@ -338,6 +364,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
                     { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
                     { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
                     { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
+                    { key: 'reports', label: 'Relatórios', activeIcon: 'document-text', inactiveIcon: 'document-text-outline' },
                     { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
                 ]}
             />
