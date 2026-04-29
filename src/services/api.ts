@@ -23,7 +23,7 @@ export interface IdosoResponse {
     responsavelNome?: string;
     criadoEm: string;
     fotoUrl?: string;
-    foto_url?: string; // 👈 Suporte para o nome vindo do banco
+    foto_url?: string; // Suporte para o nome vindo do banco (snake_case)
 }
 
 export interface Idoso extends IdosoResponse {
@@ -56,6 +56,8 @@ const mapearStatus = (estadoSaude: string): 'ativo' | 'inativo' => {
 const mapearIdoso = (response: IdosoResponse): Idoso => {
     return {
         ...response,
+        // 💡 CORREÇÃO AQUI: Garante que fotoUrl pegue o valor de foto_url caso venha do banco assim
+        fotoUrl: response.fotoUrl || response.foto_url,
         idade: calcularIdade(response.dataNascimento),
         status: mapearStatus(response.estadoSaude),
     };
@@ -74,8 +76,10 @@ export const login = async (email: string, password: string) => {
 export const buscarIdosos = async (token?: string): Promise<Idoso[]> => {
     const headers: any = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const response = await fetch(`${API_BASE_URL}/idosos`, { method: 'GET', headers });
     if (!response.ok) throw new Error('Erro ao buscar idosos');
+    
     const data = await response.json();
     const idosos = Array.isArray(data) ? data : (data.content || []);
     return idosos.map(mapearIdoso);
@@ -84,6 +88,7 @@ export const buscarIdosos = async (token?: string): Promise<Idoso[]> => {
 export const buscarIdosoPorId = async (id: number, token?: string): Promise<Idoso> => {
     const headers: any = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const response = await fetch(`${API_BASE_URL}/idosos/${id}`, { method: 'GET', headers });
     if (!response.ok) throw new Error(`Erro ${response.status}: Idoso não encontrado`);
     const data = await response.json();
@@ -93,8 +98,10 @@ export const buscarIdosoPorId = async (id: number, token?: string): Promise<Idos
 export const buscarResumo = async (token?: string): Promise<ResumoIdosos> => {
     const headers: any = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const response = await fetch(`${API_BASE_URL}/idosos/count`, { method: 'GET', headers });
     if (!response.ok) throw new Error('Erro ao buscar resumo');
+    
     const data = await response.json();
     const total = typeof data === 'number' ? data : (data.total || data.totalElements || 0);
     return {
@@ -139,10 +146,9 @@ export const getFotoUri = (path?: string | null): string | null => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
     
-    // Pega a raiz do servidor (remove /api)
     const base = API_BASE_URL.replace('/api', '');
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
     
-    // 💡 Adicionamos um timestamp (?t=...) para forçar o celular a baixar a foto nova e não usar o cache
+    // Adicionamos o timestamp para evitar cache no celular
     return `${base}/${cleanPath}?t=${new Date().getTime()}`;
 };

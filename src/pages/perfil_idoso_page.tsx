@@ -96,6 +96,9 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, onBack
 
     const uriFinal = imagemLocal || getFotoUri(idoso.fotoUrl);
 
+    console.log('fotoUrl:', idoso.fotoUrl);
+    console.log('uriFinal:', uriFinal);
+
     return (
         <SafeAreaView style={styles.container}>
             {/* Header com estilo moderno */}

@@ -14,6 +14,8 @@ import { buscarIdosos, buscarResumo, Idoso, ResumoIdosos, FiltrosAtividade } fro
 import { BottomTabBar } from '../components/BottomTabBar';
 import { ElderlyListScreen } from './elderly_list';
 import { AgendaPage } from './agenda_page';
+import { Image } from 'react-native';
+import { getFotoUri } from '../services/api';
 
 interface HomePageProps {
     token?: string;
@@ -231,41 +233,89 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
                                     <Text style={styles.emptySubtext}>Adicione o primeiro idoso para começar</Text>
                                 </View>
                             ) : (
-                                idosos.map((idoso, index) => (
-                                    <TouchableOpacity
-                                        key={idoso.id}
-                                        style={[styles.idosoCard, { marginTop: index === 0 ? 0 : 12 }]}
-                                        onPress={() => onVerPerfil(idoso.id)}
-                                        activeOpacity={0.7}
-                                    >
-                                        <View style={styles.idosoAvatar}>
-                                            <Ionicons name="person" size={24} color="#8297D9" />
-                                        </View>
-                                        <View style={styles.idosoInfo}>
-                                            <Text style={styles.idosoNome}>{idoso.nome}</Text>
-                                            <View style={styles.idosoMeta}>
-                                                <View style={styles.idosoMetaItem}>
-                                                    <Ionicons name="calendar-outline" size={14} color="#9CA3AF" />
-                                                    <Text style={styles.idosoMetaText}>{idoso.idade} anos</Text>
-                                                </View>
-                                                <View style={[styles.statusBadge, idoso.status === 'ativo' ? styles.statusAtivo : styles.statusInativo]}>
-                                                    <View style={[styles.statusDot, idoso.status === 'ativo' ? styles.statusDotAtivo : styles.statusDotInativo]} />
-                                                    <Text style={[styles.statusText, idoso.status === 'ativo' ? styles.statusTextAtivo : styles.statusTextInativo]}>
-                                                        {idoso.status === 'ativo' ? 'Ativo' : 'Inativo'}
-                                                    </Text>
-                                                </View>
+                                idosos.map((idoso, index) => {
+                                    const fotoUri = getFotoUri(idoso.fotoUrl);
+
+                                    return (
+                                        <TouchableOpacity
+                                            key={idoso.id}
+                                            style={[
+                                                styles.idosoCard,
+                                                { marginTop: index === 0 ? 0 : 12 }
+                                            ]}
+                                            onPress={() => onVerPerfil(idoso.id)}
+                                            activeOpacity={0.7}
+                                        >
+                                            {/* AVATAR */}
+                                            <View style={styles.idosoAvatar}>
+                                                {fotoUri ? (
+                                                    <Image
+                                                        source={{ uri: fotoUri + '?t=' + Date.now() }}
+                                                        style={{ width: 56, height: 56, borderRadius: 28 }}
+                                                    />
+                                                ) : (
+                                                    <Ionicons name="person" size={24} color="#8297D9" />
+                                                )}
                                             </View>
-                                            {idoso.ultimaVisita && (
-                                                <Text style={styles.idosoVisita}>
-                                                    Última visita: {new Date(idoso.ultimaVisita).toLocaleDateString('pt-BR')}
-                                                </Text>
-                                            )}
-                                        </View>
-                                        <View style={styles.chevronButton}>
-                                            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-                                        </View>
-                                    </TouchableOpacity>
-                                ))
+
+                                            {/* INFO */}
+                                            <View style={styles.idosoInfo}>
+                                                <Text style={styles.idosoNome}>{idoso.nome}</Text>
+
+                                                {/* META: idade + status */}
+                                                <View style={styles.idosoMeta}>
+                                                    <View style={styles.idosoMetaItem}>
+                                                        <Ionicons name="calendar-outline" size={14} color="#9CA3AF" />
+                                                        <Text style={styles.idosoMetaText}>
+                                                            {idoso.idade} anos
+                                                        </Text>
+                                                    </View>
+
+                                                    <View
+                                                        style={[
+                                                            styles.statusBadge,
+                                                            idoso.status === 'ativo'
+                                                                ? styles.statusAtivo
+                                                                : styles.statusInativo
+                                                        ]}
+                                                    >
+                                                        <View
+                                                            style={[
+                                                                styles.statusDot,
+                                                                idoso.status === 'ativo'
+                                                                    ? styles.statusDotAtivo
+                                                                    : styles.statusDotInativo
+                                                            ]}
+                                                        />
+                                                        <Text
+                                                            style={[
+                                                                styles.statusText,
+                                                                idoso.status === 'ativo'
+                                                                    ? styles.statusTextAtivo
+                                                                    : styles.statusTextInativo
+                                                            ]}
+                                                        >
+                                                            {idoso.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+
+                                                {/* opcional: última visita */}
+                                                {idoso.ultimaVisita && (
+                                                    <Text style={styles.idosoVisita}>
+                                                        Última visita:{" "}
+                                                        {new Date(idoso.ultimaVisita).toLocaleDateString("pt-BR")}
+                                                    </Text>
+                                                )}
+                                            </View>
+
+                                            {/* SETA */}
+                                            <View style={styles.chevronButton}>
+                                                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+                                            </View>
+                                        </TouchableOpacity>
+                                    );
+                                })
                             )}
                         </View>
                     </>
