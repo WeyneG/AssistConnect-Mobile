@@ -246,6 +246,7 @@ export const CardapioPage: React.FC<CardapioPageProps> = ({ token, onNavigateTab
             </View>
 
             <ScrollView
+                testID="cardapio-scroll"
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl
