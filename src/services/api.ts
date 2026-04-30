@@ -1,5 +1,5 @@
 // Serviço de API unificado
-const API_BASE_URL = 'http://192.168.0.5:8080/api'; 
+const API_BASE_URL = 'http://192.168.10.158:8080/api';
 
 export enum EstadoSaude {
     ATIVO = 'ATIVO',
@@ -79,7 +79,7 @@ export const buscarIdosos = async (token?: string): Promise<Idoso[]> => {
 
     const response = await fetch(`${API_BASE_URL}/idosos`, { method: 'GET', headers });
     if (!response.ok) throw new Error('Erro ao buscar idosos');
-    
+
     const data = await response.json();
     const idosos = Array.isArray(data) ? data : (data.content || []);
     return idosos.map(mapearIdoso);
@@ -101,7 +101,7 @@ export const buscarResumo = async (token?: string): Promise<ResumoIdosos> => {
 
     const response = await fetch(`${API_BASE_URL}/idosos/count`, { method: 'GET', headers });
     if (!response.ok) throw new Error('Erro ao buscar resumo');
-    
+
     const data = await response.json();
     const total = typeof data === 'number' ? data : (data.total || data.totalElements || 0);
     return {
@@ -142,13 +142,40 @@ export const uploadFotoIdoso = async (id: number, imageUri: string, token?: stri
     }
 };
 
+// ─── Cardápio / Alimentação ───────────────────────────────────────────────────
+
+export type TipoRefeicao = 'cafe' | 'almoco' | 'lanche' | 'jantar';
+export type StatusRefeicao = 'servida' | 'pendente';
+
+export interface ItemCardapio {
+    id: number;
+    data: string;                    // 'YYYY-MM-DD'
+    tipo: TipoRefeicao;
+    descricao: string;
+    observacoes?: string;
+    alimentos?: string[];
+    restricoes?: string[];           // tags de restrição alimentar
+    calorias?: number;
+    status: StatusRefeicao;
+}
+
+export const buscarCardapio = async (data: string, token?: string): Promise<ItemCardapio[]> => {
+    const headers: any = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(`${API_BASE_URL}/cardapio?data=${data}`, { method: 'GET', headers });
+    if (!response.ok) throw new Error(`Erro ${response.status}: Falha ao buscar cardápio`);
+    const data2 = await response.json();
+    return Array.isArray(data2) ? data2 : (data2.content || []);
+};
+
 export const getFotoUri = (path?: string | null): string | null => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    
+
     const base = API_BASE_URL.replace('/api', '');
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    
+
     // Adicionamos o timestamp para evitar cache no celular
     return `${base}/${cleanPath}?t=${new Date().getTime()}`;
 };
