@@ -15,6 +15,7 @@ import { BottomTabBar } from '../components/BottomTabBar';
 import { ElderlyListScreen } from './elderly_list';
 import { AgendaPage } from './agenda_page';
 import { CardapioPage } from './cardapio_page';
+import { ReportsDashboard } from './reports_dashboard';
 import { Image } from 'react-native';
 import { getFotoUri } from '../services/api';
 
@@ -25,6 +26,20 @@ interface HomePageProps {
 }
 
 type NavigationPage = 'home' | 'elderly' | 'agenda' | 'cardapio' | 'reports' | 'profile';
+
+const bottomTabs: Array<{
+    key: NavigationPage;
+    label: string;
+    activeIcon: React.ComponentProps<typeof Ionicons>['name'];
+    inactiveIcon: React.ComponentProps<typeof Ionicons>['name'];
+}> = [
+    { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
+    { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
+    { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
+    { key: 'cardapio', label: 'Cardápio', activeIcon: 'restaurant', inactiveIcon: 'restaurant-outline' },
+    { key: 'reports', label: 'Relatórios', activeIcon: 'bar-chart', inactiveIcon: 'bar-chart-outline' },
+    { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
+];
 
 // ─── Tela de Perfil simples ───────────────────────────────────────────────────
 const PerfilTab: React.FC<{ onLogout: () => void; onNavigateTab: (tab: string) => void; activeTab: string }> = ({ onLogout, onNavigateTab, activeTab }) => (
@@ -46,13 +61,7 @@ const PerfilTab: React.FC<{ onLogout: () => void; onNavigateTab: (tab: string) =
         <BottomTabBar
             activeTab={activeTab}
             onTabPress={onNavigateTab}
-            tabs={[
-                { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
-                { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
-                { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
-                { key: 'cardapio', label: 'Cardápio', activeIcon: 'restaurant', inactiveIcon: 'restaurant-outline' },
-                { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
-            ]}
+            tabs={bottomTabs}
         />
     </View>
 );
@@ -114,13 +123,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
                 <BottomTabBar
                     activeTab={currentPage}
                     onTabPress={(tab) => setCurrentPage(tab as NavigationPage)}
-                    tabs={[
-                        { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
-                        { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
-                        { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
-                        { key: 'cardapio', label: 'Cardápio', activeIcon: 'restaurant', inactiveIcon: 'restaurant-outline' },
-                        { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
-                    ]}
+                    tabs={bottomTabs}
                 />
             </View>
         );
@@ -134,13 +137,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
                 <BottomTabBar
                     activeTab={currentPage}
                     onTabPress={(tab) => setCurrentPage(tab as NavigationPage)}
-                    tabs={[
-                        { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
-                        { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
-                        { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
-                        { key: 'cardapio', label: 'Cardápio', activeIcon: 'restaurant', inactiveIcon: 'restaurant-outline' },
-                        { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
-                    ]}
+                    tabs={bottomTabs}
                 />
             </View>
         );
@@ -158,13 +155,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
                 <BottomTabBar
                     activeTab={currentPage}
                     onTabPress={(tab) => setCurrentPage(tab as NavigationPage)}
-                    tabs={[
-                        { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
-                        { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
-                        { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
-                        { key: 'cardapio', label: 'Cardápio', activeIcon: 'restaurant', inactiveIcon: 'restaurant-outline' },
-                        { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
-                    ]}
+                    tabs={bottomTabs}
                 />
             </View>
         );
@@ -381,13 +372,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
             <BottomTabBar
                 activeTab={currentPage}
                 onTabPress={(tab) => setCurrentPage(tab as NavigationPage)}
-                tabs={[
-                    { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
-                    { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
-                    { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
-                    { key: 'cardapio', label: 'Cardápio', activeIcon: 'restaurant', inactiveIcon: 'restaurant-outline' },
-                    { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
-                ]}
+                tabs={bottomTabs}
             />
         </View>
     );
