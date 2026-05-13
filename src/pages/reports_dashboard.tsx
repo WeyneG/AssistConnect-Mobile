@@ -7,12 +7,8 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Alert,
-    Share,
-    Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BarChart, PieChart } from 'react-native-chart-kit';
-import ViewShot from 'react-native-view-shot';
 import { buscarIdosos, Idoso } from '../services/api';
 
 interface ReportsDashboardProps {
@@ -414,6 +410,37 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         overflow: 'hidden',
     },
+    simpleBarRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    simpleBarLabel: {
+        width: 40,
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#6B7280',
+    },
+    simpleBarTrack: {
+        flex: 1,
+        height: 10,
+        backgroundColor: '#E5E7EB',
+        borderRadius: 6,
+        overflow: 'hidden',
+        marginHorizontal: 12,
+    },
+    simpleBarFill: {
+        height: 10,
+        backgroundColor: '#8297D9',
+        borderRadius: 6,
+    },
+    simpleBarValue: {
+        width: 32,
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#1F2937',
+        textAlign: 'right',
+    },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -435,7 +462,6 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
     const [showResidentDropdown, setShowResidentDropdown] = useState(false);
     const [dateFrom, setDateFrom] = useState('02/04/2024');
     const [dateTo, setDateTo] = useState('22/04/2024');
-    const viewShotRef = React.useRef<ViewShot>(null);
 
     const reports: Report[] = [
         { type: 'saude', label: 'Saúde', icon: 'heart' },
@@ -471,39 +497,6 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
 
     const reportData = generateSimulatedData(selectedReport);
     const tableData = generateTableData(selectedReport);
-
-    const chartConfig = {
-        backgroundGradientFrom: '#FFFFFF',
-        backgroundGradientTo: '#FFFFFF',
-        color: (opacity = 1) => `rgba(130, 151, 217, ${opacity})`,
-        strokeWidth: 2,
-        barPercentage: 0.7,
-        useShadowColorFromDataset: false,
-        decimalPlaces: 0,
-    };
-
-    const pieChartData = [
-        { name: 'Concluído', value: 75, color: '#10B981', legendFontColor: '#1F2937', legendFontSize: 12 },
-        { name: 'Pendente', value: 15, color: '#F59E0B', legendFontColor: '#1F2937', legendFontSize: 12 },
-        { name: 'Cancelado', value: 10, color: '#EF4444', legendFontColor: '#1F2937', legendFontSize: 12 },
-    ];
-
-    const handleExportPDF = async () => {
-        try {
-            if (viewShotRef.current) {
-                const uri = await viewShotRef.current.capture?.();
-                if (uri) {
-                    await Share.share({
-                        url: uri,
-                        title: `Relatório - ${selectedReport}`,
-                        message: `Relatório de ${selectedReport} para ${selectedResident?.nome || 'Residentes'}`,
-                    });
-                }
-            }
-        } catch (error) {
-            Alert.alert('Erro', 'Não foi possível exportar o relatório');
-        }
-    };
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -559,7 +552,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                 contentContainerStyle={styles.contentPadding}
                 showsVerticalScrollIndicator={false}
             >
-                <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }}>
+                <View>
                     {/* Filtros */}
                     <View style={styles.filterSection}>
                         {/* Tipo de Relatório */}
@@ -641,36 +634,22 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                                 <Text style={styles.dateInputText}>{dateTo}</Text>
                             </View>
                         </View>
-
-                        {/* Export Button */}
-                        <TouchableOpacity style={[styles.exportButton, { marginTop: 16 }]} onPress={handleExportPDF}>
-                            <Ionicons name="download-outline" size={18} color="#FFFFFF" />
-                            <Text style={styles.exportButtonText}>Exportar PDF</Text>
-                        </TouchableOpacity>
                     </View>
 
-                    {/* Gráficos */}
+                    {/* Indicadores */}
                     <View style={styles.chartsSection}>
-                        {/* Gráfico de Barras */}
                         <View style={styles.chartCard}>
-                            <Text style={styles.chartTitle}>Atividades por Dia da Semana</Text>
-                            <BarChart
-                                data={{
-                                    labels: reportData.labels,
-                                    datasets: [
-                                        {
-                                            data: reportData.values,
-                                        },
-                                    ],
-                                }}
-                                width={Dimensions.get('window').width - 64}
-                                height={220}
-                                chartConfig={chartConfig}
-                                bezier
-                                verticalLabelRotation={0}
-                            />
+                            <Text style={styles.chartTitle}>Indicadores</Text>
+                            {reportData.labels.map((label, index) => (
+                                <View key={label} style={styles.simpleBarRow}>
+                                    <Text style={styles.simpleBarLabel}>{label}</Text>
+                                    <View style={styles.simpleBarTrack}>
+                                        <View style={[styles.simpleBarFill, { width: `${Math.min(reportData.values[index], 100)}%` }]} />
+                                    </View>
+                                    <Text style={styles.simpleBarValue}>{reportData.values[index]}</Text>
+                                </View>
+                            ))}
 
-                            {/* Summary Cards */}
                             <View style={styles.summaryGrid}>
                                 <View style={styles.summaryItem}>
                                     <Text style={styles.summaryLabel}>Total</Text>
@@ -692,28 +671,6 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                                         {reportData.summary.lowest}
                                     </Text>
                                 </View>
-                            </View>
-                        </View>
-
-                        {/* Gráfico de Pizza */}
-                        <View style={styles.chartCard}>
-                            <Text style={styles.chartTitle}>Status Geral</Text>
-                            <View style={{ alignItems: 'center' }}>
-                                <PieChart
-                                    data={pieChartData}
-                                    width={Dimensions.get('window').width - 64}
-                                    height={220}
-                                    chartConfig={{
-                                        backgroundColor: '#FFFFFF',
-                                        backgroundGradientFrom: '#FFFFFF',
-                                        backgroundGradientTo: '#FFFFFF',
-                                        color: () => '#8297D9',
-                                    }}
-                                    accessor="value"
-                                    backgroundColor="transparent"
-                                    paddingLeft="15"
-                                    absolute
-                                />
                             </View>
                         </View>
                     </View>
@@ -751,7 +708,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                             <Text style={styles.emptySubtext}>Nenhum registro encontrado para o período selecionado</Text>
                         </View>
                     )}
-                </ViewShot>
+                </View>
 
                 <View style={{ height: 100 }} />
             </ScrollView>
