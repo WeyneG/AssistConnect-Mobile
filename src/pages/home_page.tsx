@@ -16,6 +16,7 @@ import { ElderlyListScreen } from './elderly_list';
 import { AgendaPage } from './agenda_page';
 import { CardapioPage } from './cardapio_page';
 import { ReportsDashboard } from './reports_dashboard';
+import { MedicamentosPage } from './medicamentos_page';
 import { Image } from 'react-native';
 import { getFotoUri } from '../services/api';
 
@@ -25,7 +26,7 @@ interface HomePageProps {
     onVerPerfil: (idosoId: number) => void;
 }
 
-type NavigationPage = 'home' | 'elderly' | 'agenda' | 'cardapio' | 'reports' | 'profile';
+type NavigationPage = 'home' | 'elderly' | 'agenda' | 'cardapio' | 'medicamentos' | 'reports' | 'profile';
 
 const bottomTabs: Array<{
     key: NavigationPage;
@@ -33,13 +34,11 @@ const bottomTabs: Array<{
     activeIcon: React.ComponentProps<typeof Ionicons>['name'];
     inactiveIcon: React.ComponentProps<typeof Ionicons>['name'];
 }> = [
-    { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
-    { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
-    { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
-    { key: 'cardapio', label: 'Cardápio', activeIcon: 'restaurant', inactiveIcon: 'restaurant-outline' },
-    { key: 'reports', label: 'Relatórios', activeIcon: 'bar-chart', inactiveIcon: 'bar-chart-outline' },
-    { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
-];
+        { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
+        { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
+        { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
+        { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
+    ];
 
 // ─── Tela de Perfil simples ───────────────────────────────────────────────────
 const PerfilTab: React.FC<{ onLogout: () => void; onNavigateTab: (tab: string) => void; activeTab: string }> = ({ onLogout, onNavigateTab, activeTab }) => (
@@ -143,6 +142,20 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
         );
     }
 
+    // Mostrar medicamentos
+    if (currentPage === 'medicamentos') {
+        return (
+            <View style={{ flex: 1 }}>
+                <MedicamentosPage token={token} />
+                <BottomTabBar
+                    activeTab={currentPage}
+                    onTabPress={(tab) => setCurrentPage(tab as NavigationPage)}
+                    tabs={bottomTabs}
+                />
+            </View>
+        );
+    }
+
     // Mostrar relatórios
     if (currentPage === 'reports') {
         return (
@@ -218,40 +231,60 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
                             <View style={styles.statsContainer}>
                                 <View style={styles.statCard}>
                                     <View style={styles.statIconContainer}>
-                                        <Ionicons name="people" size={28} color="#8297D9" />
+                                        <Ionicons name="people" size={18} color="#8297D9" />
                                     </View>
-                                    <Text style={styles.statNumber}>{resumo.total}</Text>
-                                    <Text style={styles.statLabel}>Total</Text>
+                                    <View style={styles.statInfo}>
+                                        <Text style={styles.statNumber}>{resumo.total}</Text>
+                                        <Text style={styles.statLabel}>Total</Text>
+                                    </View>
                                 </View>
                                 <View style={styles.statCard}>
-                                    <View style={[styles.statIconContainer, { backgroundColor: '#E8F5E9' }]}>
-                                        <Ionicons name="checkmark-circle" size={28} color="#4CAF50" />
+                                    <View style={[styles.statIconContainer, { backgroundColor: '#ECFDF5' }]}>
+                                        <Ionicons name="checkmark-circle" size={18} color="#10B981" />
                                     </View>
-                                    <Text style={styles.statNumber}>{resumo.ativos}</Text>
-                                    <Text style={styles.statLabel}>Ativos</Text>
+                                    <View style={styles.statInfo}>
+                                        <Text style={styles.statNumber}>{resumo.ativos}</Text>
+                                        <Text style={styles.statLabel}>Ativos</Text>
+                                    </View>
                                 </View>
                                 <View style={styles.statCard}>
-                                    <View style={[styles.statIconContainer, { backgroundColor: '#FFF3E0' }]}>
-                                        <Ionicons name="pause-circle" size={28} color="#FF9800" />
+                                    <View style={[styles.statIconContainer, { backgroundColor: '#FEF3E7' }]}>
+                                        <Ionicons name="pause-circle" size={18} color="#F59E0B" />
                                     </View>
-                                    <Text style={styles.statNumber}>{resumo.inativos}</Text>
-                                    <Text style={styles.statLabel}>Inativos</Text>
+                                    <View style={styles.statInfo}>
+                                        <Text style={styles.statNumber}>{resumo.inativos}</Text>
+                                        <Text style={styles.statLabel}>Inativos</Text>
+                                    </View>
                                 </View>
                             </View>
                         )}
 
-                        <TouchableOpacity style={styles.agendaCard} onPress={() => setCurrentPage('agenda')} activeOpacity={0.8}>
-                            <View style={styles.agendaCardLeft}>
-                                <View style={styles.agendaCardIcon}>
-                                    <Ionicons name="calendar" size={22} color="#8297D9" />
+                        {/* Cards de Acesso Rápido */}
+                        <View style={styles.quickAccessContainer}>
+                            <TouchableOpacity style={styles.quickAccessCard} onPress={() => setCurrentPage('cardapio')} activeOpacity={0.8}>
+                                <View style={[styles.quickAccessIcon, { backgroundColor: '#FEF3C7' }]}>
+                                    <Ionicons name="restaurant" size={24} color="#F59E0B" />
                                 </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.agendaCardTitle}>Agenda do dia</Text>
-                                    <Text style={styles.agendaCardSubtitle}>Abra atividades por período, veja os detalhes e edite sem sair da tela.</Text>
+                                <Text style={styles.quickAccessTitle}>Cardápio</Text>
+                                <Text style={styles.quickAccessSubtitle}>Refeições do dia</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.quickAccessCard} onPress={() => setCurrentPage('medicamentos')} activeOpacity={0.8}>
+                                <View style={[styles.quickAccessIcon, { backgroundColor: '#DBEAFE' }]}>
+                                    <Ionicons name="medical" size={24} color="#3B82F6" />
                                 </View>
-                            </View>
-                            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-                        </TouchableOpacity>
+                                <Text style={styles.quickAccessTitle}>Medicamentos</Text>
+                                <Text style={styles.quickAccessSubtitle}>Controle diário</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.quickAccessCard} onPress={() => setCurrentPage('reports')} activeOpacity={0.8}>
+                                <View style={[styles.quickAccessIcon, { backgroundColor: '#E0E7FF' }]}>
+                                    <Ionicons name="bar-chart" size={24} color="#6366F1" />
+                                </View>
+                                <Text style={styles.quickAccessTitle}>Relatórios</Text>
+                                <Text style={styles.quickAccessSubtitle}>Análises</Text>
+                            </TouchableOpacity>
+                        </View>
 
                         {/* Lista de Idosos */}
                         <View style={styles.section}>
@@ -405,40 +438,78 @@ const styles = StyleSheet.create({
     errorMessage: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 },
     retryButton: { marginTop: 24, backgroundColor: '#8297D9', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12 },
     retryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-    statsContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 12 },
+    statsContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 8 },
     statCard: {
-        flex: 1, backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16, alignItems: 'center',
-        shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2,
-    },
-    statIconContainer: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-    statNumber: { fontSize: 28, fontWeight: '700', color: '#1F2937', marginBottom: 4 },
-    statLabel: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
-    agendaCard: {
-        marginHorizontal: 20,
-        marginTop: 18,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 18,
-        padding: 16,
+        flex: 1,
+        backgroundColor: '#F9FAFB',
+        borderRadius: 12,
+        padding: 10,
+        paddingVertical: 12,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
+        gap: 10,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
     },
-    agendaCardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
-    agendaCardIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+    statIconContainer: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
         backgroundColor: '#EEF2FF',
         alignItems: 'center',
         justifyContent: 'center',
     },
-    agendaCardTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 4 },
-    agendaCardSubtitle: { fontSize: 13, color: '#6B7280', lineHeight: 18 },
+    statInfo: {
+        flex: 1,
+    },
+    statNumber: { fontSize: 18, fontWeight: '700', color: '#1F2937', lineHeight: 20 },
+    statLabel: { fontSize: 10, color: '#6B7280', fontWeight: '500', marginTop: 2 },
+    quickAccessContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 20,
+        marginTop: 20,
+        gap: 12
+    },
+    quickAccessCard: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        padding: 18,
+        alignItems: 'center',
+        shadowColor: '#8297D9',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 5,
+        borderWidth: 1,
+        borderColor: 'rgba(130, 151, 217, 0.1)',
+    },
+    quickAccessIcon: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    quickAccessTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#1F2937',
+        marginBottom: 4,
+        textAlign: 'center',
+    },
+    quickAccessSubtitle: {
+        fontSize: 11,
+        color: '#6B7280',
+        textAlign: 'center',
+        fontWeight: '500',
+    },
     section: { paddingHorizontal: 20, marginTop: 32 },
     sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     sectionTitle: { fontSize: 20, fontWeight: '700', color: '#1F2937', letterSpacing: -0.3 },
