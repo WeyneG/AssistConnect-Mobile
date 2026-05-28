@@ -10,9 +10,20 @@ import {
     Modal,
     TextInput,
     Alert,
+    Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { buscarMedicamentos, buscarIdosos, Medicamento, Idoso } from '../services/api';
+import { buscarMedicamentos, buscarIdosos, atualizarMedicamento, Medicamento, Idoso } from '../services/api';
+import * as Notifications from 'expo-notifications';
+
+// Configuração de notificações
+Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+    }),
+});
 
 interface MedicamentosPageProps {
     token?: string;
@@ -28,10 +39,67 @@ export const MedicamentosPage: React.FC<MedicamentosPageProps> = ({ token }) => 
     const [filtroResidente, setFiltroResidente] = useState<number | null>(null);
     const [filtroData, setFiltroData] = useState<string>(new Date().toISOString().split('T')[0]);
     const [modalFiltroVisible, setModalFiltroVisible] = useState(false);
+    const [modalConfirmacaoVisible, setModalConfirmacaoVisible] = useState(false);
+    const [medicamentoSelecionado, setMedicamentoSelecionado] = useState<Medicamento | null>(null);
+    const [observacaoAdministracao, setObservacaoAdministracao] = useState('');
 
     useEffect(() => {
         carregarDados();
+        solicitarPermissaoNotificacoes();
+        verificarMedicamentosAtrasados();
     }, [filtroResidente, filtroData]);
+
+    // Solicitar permissão para notificações
+    const solicitarPermissaoNotificacoes = async () => {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+
+        if (existingStatus !== 'granted') {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+        }
+
+        if (finalStatus !== 'granted') {
+            console.warn('Permissão de notificação negada');
+        }
+    };
+
+    // Verificar medicamentos atrasados e enviar notificações
+    const verificarMedicamentosAtrasados = async () => {
+        try {
+            const agora = new Date();
+            const horaAtual = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
+
+            const meds = await buscarMedicamentos(filtroData, filtroResidente, token);
+            const atrasados = meds.filter(m => {
+                if (m.status !== 'pendente') return false;
+                return m.horarioPrevisto < horaAtual;
+            });
+
+            if (atrasados.length > 0) {
+                // Atualizar status para atrasado
+                for (const med of atrasados) {
+                    await atualizarMedicamento(med.id, { status: 'atrasado' }, token);
+                }
+
+                // Enviar notificação push
+                await Notifications.scheduleNotificationAsync({
+                    content: {
+                        title: '⚠️ Medicamentos Atrasados',
+                        body: `${atrasados.length} medicamento(s) não foram administrados no horário previsto`,
+                        data: { medicamentos: atrasados },
+                        badge: atrasados.length,
+                    },
+                    trigger: null, // Enviar imediatamente
+                });
+
+                // Atualizar badge
+                await Notifications.setBadgeCountAsync(atrasados.length);
+            }
+        } catch (error) {
+            console.error('Erro ao verificar medicamentos atrasados:', error);
+        }
+    };
 
     const carregarDados = async () => {
         try {
@@ -52,7 +120,68 @@ export const MedicamentosPage: React.FC<MedicamentosPageProps> = ({ token }) => 
     const onRefresh = async () => {
         setRefreshing(true);
         await carregarDados();
+        await verificarMedicamentosAtrasados();
         setRefreshing(false);
+    };
+
+    // Abrir modal de confirmação de administração
+    const abrirConfirmacaoAdministracao = (med: Medicamento) => {
+        if (med.status === 'administrado') {
+            Alert.alert('Aviso', 'Este medicamento já foi administrado');
+            return;
+        }
+        setMedicamentoSelecionado(med);
+        setObservacaoAdministracao('');
+        setModalConfirmacaoVisible(true);
+    };
+
+    // Confirmar administração do medicamento
+    const confirmarAdministracao = async () => {
+        if (!medicamentoSelecionado) return;
+
+        try {
+            const agora = new Date();
+            const horarioAdministrado = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
+
+            // Atualizar medicamento para administrado
+            await atualizarMedicamento(
+                medicamentoSelecionado.id,
+                {
+                    status: 'administrado',
+                    observacoes: observacaoAdministracao || `Administrado às ${horarioAdministrado}`,
+                },
+                token
+            );
+
+            // Atualizar lista local
+            setMedicamentos(prev =>
+                prev.map(m =>
+                    m.id === medicamentoSelecionado.id
+                        ? { ...m, status: 'administrado', observacoes: observacaoAdministracao || `Administrado às ${horarioAdministrado}` }
+                        : m
+                )
+            );
+
+            // Limpar badge se não houver mais atrasados
+            const atrasados = medicamentos.filter(m => m.status === 'atrasado' && m.id !== medicamentoSelecionado.id);
+            if (atrasados.length === 0) {
+                await Notifications.setBadgeCountAsync(0);
+            } else {
+                await Notifications.setBadgeCountAsync(atrasados.length);
+            }
+
+            setModalConfirmacaoVisible(false);
+            setMedicamentoSelecionado(null);
+            setObservacaoAdministracao('');
+
+            Alert.alert(
+                'Sucesso',
+                `Administração de ${medicamentoSelecionado.nome} registrada com sucesso!`,
+                [{ text: 'OK' }]
+            );
+        } catch (error) {
+            Alert.alert('Erro', 'Não foi possível registrar a administração');
+        }
     };
 
     const agruparPorHorario = () => {
@@ -165,7 +294,12 @@ export const MedicamentosPage: React.FC<MedicamentosPageProps> = ({ token }) => 
                             </View>
 
                             {meds.map((med, index) => (
-                                <View key={med.id} style={[styles.medCard, index > 0 && { marginTop: 12 }]}>
+                                <TouchableOpacity
+                                    key={med.id}
+                                    style={[styles.medCard, index > 0 && { marginTop: 12 }]}
+                                    onPress={() => abrirConfirmacaoAdministracao(med)}
+                                    activeOpacity={med.status === 'administrado' ? 1 : 0.7}
+                                >
                                     <View style={styles.medHeader}>
                                         <View style={styles.medInfo}>
                                             <Text style={styles.medNome}>{med.nome}</Text>
@@ -189,16 +323,111 @@ export const MedicamentosPage: React.FC<MedicamentosPageProps> = ({ token }) => 
                                             <Text style={styles.medDetailText}>{med.via}</Text>
                                         </View>
                                     </View>
-                                </View>
+
+                                    {med.status !== 'administrado' && (
+                                        <View style={styles.medActions}>
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.btnAdministrar,
+                                                    med.status === 'atrasado' && styles.btnAdministrarUrgente
+                                                ]}
+                                                onPress={() => abrirConfirmacaoAdministracao(med)}
+                                            >
+                                                <Ionicons
+                                                    name="checkmark-circle"
+                                                    size={20}
+                                                    color="#FFFFFF"
+                                                />
+                                                <Text style={styles.btnAdministrarText}>
+                                                    {med.status === 'atrasado' ? 'Administrar Urgente' : 'Marcar como Administrado'}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+
+                                    {med.observacoes && (
+                                        <View style={styles.medObservacoes}>
+                                            <Ionicons name="information-circle-outline" size={14} color="#6B7280" />
+                                            <Text style={styles.medObservacoesText}>{med.observacoes}</Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
                             ))}
                         </View>
                     ))
                 )}
             </ScrollView>
 
+            {/* Modal de Confirmação de Administração */}
+            <Modal visible={modalConfirmacaoVisible} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalConfirmacao}>
+                        <View style={styles.modalConfirmacaoHeader}>
+                            <View style={styles.modalConfirmacaoIconContainer}>
+                                <Ionicons name="medical" size={32} color="#202c4b" />
+                            </View>
+                            <Text style={styles.modalConfirmacaoTitle}>Confirmar Administração</Text>
+                            <Text style={styles.modalConfirmacaoSubtitle}>
+                                {medicamentoSelecionado?.nome} - {medicamentoSelecionado?.dosagem}
+                            </Text>
+                        </View>
+
+                        <View style={styles.modalConfirmacaoInfo}>
+                            <View style={styles.infoRow}>
+                                <Ionicons name="person-outline" size={18} color="#6B7280" />
+                                <Text style={styles.infoText}>{medicamentoSelecionado?.residenteNome}</Text>
+                            </View>
+                            <View style={styles.infoRow}>
+                                <Ionicons name="time-outline" size={18} color="#6B7280" />
+                                <Text style={styles.infoText}>
+                                    Horário previsto: {medicamentoSelecionado?.horarioPrevisto}
+                                </Text>
+                            </View>
+                            <View style={styles.infoRow}>
+                                <Ionicons name="water-outline" size={18} color="#6B7280" />
+                                <Text style={styles.infoText}>Via: {medicamentoSelecionado?.via}</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.modalConfirmacaoObservacoes}>
+                            <Text style={styles.observacoesLabel}>Observações (opcional)</Text>
+                            <TextInput
+                                style={styles.observacoesInput}
+                                value={observacaoAdministracao}
+                                onChangeText={setObservacaoAdministracao}
+                                placeholder="Ex: Paciente aceitou bem o medicamento"
+                                multiline
+                                numberOfLines={3}
+                                textAlignVertical="top"
+                            />
+                        </View>
+
+                        <View style={styles.modalConfirmacaoActions}>
+                            <TouchableOpacity
+                                style={styles.btnCancelar}
+                                onPress={() => {
+                                    setModalConfirmacaoVisible(false);
+                                    setMedicamentoSelecionado(null);
+                                    setObservacaoAdministracao('');
+                                }}
+                            >
+                                <Text style={styles.btnCancelarText}>Cancelar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.btnConfirmar}
+                                onPress={confirmarAdministracao}
+                            >
+                                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                                <Text style={styles.btnConfirmarText}>Confirmar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
             {/* Modal de Filtros */}
             <Modal visible={modalFiltroVisible} transparent animationType="slide">
-                <View style={styles.modalOverlay}>
+                <View style={styles.modalOverlayFiltros}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Filtros</Text>
@@ -334,7 +563,92 @@ const styles = StyleSheet.create({
     medDetails: { flexDirection: 'row', gap: 16 },
     medDetailItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     medDetailText: { fontSize: 13, color: '#6B7280' },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'flex-end' },
+    medActions: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+    btnAdministrar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#10B981',
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 10,
+        gap: 8,
+    },
+    btnAdministrarUrgente: {
+        backgroundColor: '#EF4444',
+    },
+    btnAdministrarText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
+    medObservacoes: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 6,
+        marginTop: 8,
+        padding: 10,
+        backgroundColor: '#F9FAFB',
+        borderRadius: 8,
+    },
+    medObservacoesText: { fontSize: 12, color: '#6B7280', flex: 1 },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+    modalConfirmacao: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        padding: 24,
+        width: '100%',
+        maxWidth: 400,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 10,
+    },
+    modalConfirmacaoHeader: { alignItems: 'center', marginBottom: 20 },
+    modalConfirmacaoIconContainer: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: '#EEF2FF',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
+    modalConfirmacaoTitle: { fontSize: 20, fontWeight: '700', color: '#1F2937', marginBottom: 4 },
+    modalConfirmacaoSubtitle: { fontSize: 14, color: '#6B7280', textAlign: 'center' },
+    modalConfirmacaoInfo: { marginBottom: 20, gap: 12 },
+    infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    infoText: { fontSize: 14, color: '#1F2937', flex: 1 },
+    modalConfirmacaoObservacoes: { marginBottom: 20 },
+    observacoesLabel: { fontSize: 14, fontWeight: '600', color: '#1F2937', marginBottom: 8 },
+    observacoesInput: {
+        backgroundColor: '#F9FAFB',
+        borderRadius: 12,
+        padding: 12,
+        fontSize: 14,
+        color: '#1F2937',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        minHeight: 80,
+    },
+    modalConfirmacaoActions: { flexDirection: 'row', gap: 12 },
+    btnCancelar: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 12,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+    },
+    btnCancelarText: { fontSize: 15, fontWeight: '600', color: '#6B7280' },
+    btnConfirmar: {
+        flex: 1,
+        flexDirection: 'row',
+        paddingVertical: 14,
+        borderRadius: 12,
+        backgroundColor: '#202c4b',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    btnConfirmarText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+    modalOverlayFiltros: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'flex-end' },
     modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
     modalTitle: { fontSize: 20, fontWeight: '700', color: '#1F2937' },
