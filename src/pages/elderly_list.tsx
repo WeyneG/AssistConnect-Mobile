@@ -14,11 +14,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { buscarIdosos, Idoso } from '../services/api';
-import { ElderlyProfileScreen } from './elderly_profile';
+import { PerfilIdosoPage } from './perfil_idoso_page';
 import { BottomTabBar } from '../components/BottomTabBar';
 
 interface ElderlyListProps {
     token?: string;
+    userRole?: string;
     onBack: () => void;
     onNavigateTab?: (tab: string) => void;
     activeTab?: string;
@@ -26,7 +27,7 @@ interface ElderlyListProps {
 
 type ViewMode = 'list' | 'profile';
 
-export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, onNavigateTab, activeTab = 'elderly' }) => {
+export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, userRole, onBack, onNavigateTab, activeTab = 'elderly' }) => {
     const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [selectedIdosoId, setSelectedIdosoId] = useState<number | null>(null);
 
@@ -49,7 +50,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, o
     // Busca com debounce
     const [searchText, setSearchText] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
-    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const searchTimeoutRef = useRef<any>(null);
     const [filterStatus, setFilterStatus] = useState<'todos' | 'ativo' | 'inativo'>('todos');
     const [filterRoom, setFilterRoom] = useState<string>('todos');
     const [availableRooms, setAvailableRooms] = useState<string[]>([]);
@@ -99,7 +100,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, o
             setTodosIdosos(idososData);
             setHasMore(idososData.length === pageSize);
             // Extrair quartos únicos e ordenar
-            const quartos = Array.from(new Set(idososData.map(i => i.quarto))).sort();
+            const quartos = Array.from(new Set(idososData.map(i => i.quarto).filter(Boolean))).sort() as string[];
             setAvailableRooms(quartos);
         } catch (err) {
             const mensagemErro = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -174,12 +175,11 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, o
     // Tela de perfil
     if (viewMode === 'profile' && selectedIdosoId) {
         return (
-            <ElderlyProfileScreen
+            <PerfilIdosoPage
                 idosoId={selectedIdosoId}
                 token={token}
+                userRole={userRole}
                 onBack={handleBackFromProfile}
-                onNavigateTab={onNavigateTab}
-                activeTab={activeTab}
             />
         );
     }
@@ -198,7 +198,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, o
                     </View>
                 </View>
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#8297D9" />
+                    <ActivityIndicator size="large" color="#202c4b" />
                     <Text style={styles.loadingText}>Carregando...</Text>
                 </View>
             </View>
@@ -220,7 +220,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, o
                 </View>
                 <View style={styles.errorContainer}>
                     <View style={styles.errorIcon}>
-                        <Ionicons name="cloud-offline-outline" size={48} color="#8297D9" />
+                        <Ionicons name="cloud-offline-outline" size={48} color="#202c4b" />
                     </View>
                     <Text style={styles.errorTitle}>Sem conexão</Text>
                     <Text style={styles.errorMessage}>{error}</Text>
@@ -321,7 +321,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, o
                             <View style={styles.activeChip}>
                                 <Text style={styles.activeChipText}>{filterStatus === 'ativo' ? 'Ativos' : 'Inativos'}</Text>
                                 <TouchableOpacity onPress={() => setFilterStatus('todos')} hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}>
-                                    <Ionicons name="close" size={13} color="#8297D9" />
+                                    <Ionicons name="close" size={13} color="#202c4b" />
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -329,7 +329,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, o
                             <View style={styles.activeChip}>
                                 <Text style={styles.activeChipText}>Qto {filterRoom}</Text>
                                 <TouchableOpacity onPress={() => setFilterRoom('todos')} hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}>
-                                    <Ionicons name="close" size={13} color="#8297D9" />
+                                    <Ionicons name="close" size={13} color="#202c4b" />
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -352,7 +352,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, o
                     >
                         {/* Avatar */}
                         <View style={styles.cardAvatar}>
-                            <Ionicons name="person" size={20} color="#8297D9" />
+                            <Ionicons name="person" size={20} color="#202c4b" />
                         </View>
 
                         {/* Informações */}
@@ -415,7 +415,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, o
                         <View style={styles.loadMoreContainer}>
                             {loadingMore ? (
                                 <>
-                                    <ActivityIndicator size="large" color="#8297D9" />
+                                    <ActivityIndicator size="large" color="#202c4b" />
                                     <Text style={styles.loadingMoreText}>Carregando mais...</Text>
                                 </>
                             ) : (
@@ -424,7 +424,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, o
                                     onPress={carregarMais}
                                     disabled={loadingMore}
                                 >
-                                    <Ionicons name="arrow-down" size={18} color="#8297D9" />
+                                    <Ionicons name="arrow-down" size={18} color="#202c4b" />
                                     <Text style={styles.loadMoreButtonText}>Carregar mais</Text>
                                 </TouchableOpacity>
                             )}
@@ -435,8 +435,8 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, o
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        colors={['#8297D9']}
-                        tintColor="#8297D9"
+                        colors={['#202c4b']}
+                        tintColor="#202c4b"
                     />
                 }
                 scrollIndicatorInsets={{ right: 1 }}
@@ -452,6 +452,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, onBack, o
                     { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
                     { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
                     { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
+                    { key: 'reports', label: 'Relatórios', activeIcon: 'bar-chart', inactiveIcon: 'bar-chart-outline' },
                     { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
                 ]}
             />
@@ -465,7 +466,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F8FAFC',
     },
     header: {
-        backgroundColor: '#8297D9',
+        backgroundColor: '#202c4b',
         paddingTop: 50,
         paddingBottom: 20,
         paddingHorizontal: 20,
@@ -497,16 +498,16 @@ const styles = StyleSheet.create({
     modalFilterLabel: { fontSize: 12, fontWeight: '700', color: '#6B7280', marginBottom: 8, marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
     modalFilterRow: { flexDirection: 'row', flexWrap: 'wrap' },
     modalChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB', marginRight: 8, marginBottom: 8 },
-    modalChipActive: { backgroundColor: '#8297D9', borderColor: '#8297D9' },
+    modalChipActive: { backgroundColor: '#202c4b', borderColor: '#202c4b' },
     modalChipText: { fontSize: 13, fontWeight: '500', color: '#6B7280' },
     modalChipTextActive: { color: '#FFFFFF' },
-    modalApplyBtn: { backgroundColor: '#8297D9', borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
+    modalApplyBtn: { backgroundColor: '#202c4b', borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
     modalApplyText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
     // Search + chips ativos
     searchSection: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
     activeFiltersRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 10 },
-    activeChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EEF2FF', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: '#8297D9', marginRight: 8, marginBottom: 4 },
-    activeChipText: { fontSize: 12, fontWeight: '600', color: '#8297D9', marginRight: 4 },
+    activeChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EEF2FF', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: '#202c4b', marginRight: 8, marginBottom: 4 },
+    activeChipText: { fontSize: 12, fontWeight: '600', color: '#202c4b', marginRight: 4 },
     clearBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, backgroundColor: '#FEE2E2', borderRadius: 20, marginBottom: 4 },
     clearBtnText: { fontSize: 12, fontWeight: '600', color: '#EF4444', marginLeft: 4 },
     searchContainer: {
@@ -572,7 +573,7 @@ const styles = StyleSheet.create({
     },
     retryButton: {
         marginTop: 24,
-        backgroundColor: '#8297D9',
+        backgroundColor: '#202c4b',
         paddingHorizontal: 32,
         paddingVertical: 14,
         borderRadius: 12,
@@ -722,7 +723,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     loadMoreButtonText: {
-        color: '#8297D9',
+        color: '#202c4b',
         fontSize: 14,
         fontWeight: '600',
     },

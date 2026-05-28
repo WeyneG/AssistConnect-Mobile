@@ -41,26 +41,38 @@ const mockIdosos = [
     {
         id: 1,
         nome: 'João Silva',
+        dataNascimento: '1949-01-15',
+        sexo: 'MASCULINO',
+        estadoSaude: 'ATIVO',
         idade: 75,
-        quarto: '101',
         status: 'ativo' as const,
+        quarto: '101',
         ultimaVisita: '2024-01-15',
+        criadoEm: '2024-01-10T10:00:00'
     },
     {
         id: 2,
         nome: 'Maria Santos',
+        dataNascimento: '1942-01-14',
+        sexo: 'FEMININO',
+        estadoSaude: 'ATIVO',
         idade: 82,
-        quarto: '102',
         status: 'ativo' as const,
+        quarto: '102',
         ultimaVisita: '2024-01-14',
+        criadoEm: '2024-01-10T10:00:00'
     },
     {
         id: 3,
         nome: 'José Oliveira',
+        dataNascimento: '1956-01-10',
+        sexo: 'MASCULINO',
+        estadoSaude: 'INATIVO',
         idade: 68,
-        quarto: '201',
         status: 'inativo' as const,
+        quarto: '201',
         ultimaVisita: '2024-01-10',
+        criadoEm: '2024-01-10T10:00:00'
     },
 ];
 
@@ -106,6 +118,14 @@ describe('ElderlyListScreen - Dashboard Tests', () => {
     // ─── Busca de residentes ─────────────────────────────────────────────────────
 
     describe('Busca de residentes', () => {
+        beforeEach(() => {
+            jest.useFakeTimers();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+        });
+
         it('deve buscar residente por nome parcial', async () => {
             mockBuscarIdosos.mockResolvedValueOnce(mockIdosos);
             const { getByPlaceholderText, getByText, queryByText } = render(<ElderlyListScreen {...defaultProps} />);
@@ -116,10 +136,12 @@ describe('ElderlyListScreen - Dashboard Tests', () => {
 
             const searchInput = getByPlaceholderText('Buscar idoso...');
 
-            await act(async () => {
+            act(() => {
                 fireEvent.changeText(searchInput, 'João');
-                // Aguardar debounce
-                await new Promise(resolve => setTimeout(resolve, 350));
+            });
+
+            act(() => {
+                jest.advanceTimersByTime(350);
             });
 
             await waitFor(() => {
@@ -138,9 +160,12 @@ describe('ElderlyListScreen - Dashboard Tests', () => {
 
             const searchInput = getByPlaceholderText('Buscar idoso...');
 
-            await act(async () => {
+            act(() => {
                 fireEvent.changeText(searchInput, 'joão');
-                await new Promise(resolve => setTimeout(resolve, 350));
+            });
+
+            act(() => {
+                jest.advanceTimersByTime(350);
             });
 
             await waitFor(() => {
@@ -159,9 +184,12 @@ describe('ElderlyListScreen - Dashboard Tests', () => {
 
             const searchInput = getByPlaceholderText('Buscar idoso...');
 
-            await act(async () => {
+            act(() => {
                 fireEvent.changeText(searchInput, 'Nome Inexistente');
-                await new Promise(resolve => setTimeout(resolve, 350));
+            });
+
+            act(() => {
+                jest.advanceTimersByTime(350);
             });
 
             await waitFor(() => {
@@ -179,14 +207,20 @@ describe('ElderlyListScreen - Dashboard Tests', () => {
 
             const searchInput = getByPlaceholderText('Buscar idoso...');
 
-            await act(async () => {
+            act(() => {
                 fireEvent.changeText(searchInput, 'João');
-                await new Promise(resolve => setTimeout(resolve, 350));
             });
 
-            await act(async () => {
+            act(() => {
+                jest.advanceTimersByTime(350);
+            });
+
+            act(() => {
                 fireEvent.changeText(searchInput, '');
-                await new Promise(resolve => setTimeout(resolve, 350));
+            });
+
+            act(() => {
+                jest.advanceTimersByTime(350);
             });
 
             await waitFor(() => {

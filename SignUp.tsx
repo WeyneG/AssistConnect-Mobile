@@ -9,8 +9,10 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { cadastrarUsuario } from './src/services/api';
 
 interface SignUpScreenProps {
   onBackToLogin: () => void;
@@ -23,8 +25,9 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onBackToLogin }) => 
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     if (!name || !email || !password || !confirmPassword) {
       Alert.alert('Atenção', 'Por favor, preencha todos os campos');
       return;
@@ -35,9 +38,25 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onBackToLogin }) => 
       return;
     }
 
-    Alert.alert('Sucesso', 'Conta criada com sucesso!', [
-      { text: 'OK', onPress: onBackToLogin }
-    ]);
+    if (password.length < 6) {
+      Alert.alert('Erro', 'A senha deve ter no mínimo 6 caracteres');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await cadastrarUsuario(name, email, password);
+      setIsLoading(false);
+      
+      // Redireciona imediatamente para a tela de login
+      onBackToLogin();
+      
+      // Exibe a notificação de sucesso sobre a tela de login
+      Alert.alert('Sucesso', 'Conta criada com sucesso! Faça login para continuar.');
+    } catch (error: any) {
+      setIsLoading(false);
+      Alert.alert('Erro ao cadastrar', error.message || 'Não foi possível conectar ao servidor');
+    }
   };
 
   return (
@@ -58,7 +77,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onBackToLogin }) => 
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.iconContainer}>
-            <Ionicons name="person-add" size={32} color="#8297D9" />
+            <Ionicons name="person-add" size={32} color="#202c4b" />
           </View>
           <Text style={styles.title}>Criar Conta</Text>
           <Text style={styles.subtitle}>Preencha os dados para começar</Text>
@@ -148,12 +167,19 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onBackToLogin }) => 
           </View>
 
           <TouchableOpacity
-            style={styles.signUpButton}
+            style={[styles.signUpButton, isLoading && { opacity: 0.6 }]}
             onPress={handleSignUp}
+            disabled={isLoading}
             activeOpacity={0.8}
           >
-            <Text style={styles.signUpButtonText}>Criar Conta</Text>
-            <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <>
+                <Text style={styles.signUpButtonText}>Criar Conta</Text>
+                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+              </>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -203,7 +229,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    shadowColor: '#8297D9',
+    shadowColor: '#202c4b',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -265,14 +291,14 @@ const styles = StyleSheet.create({
   },
   signUpButton: {
     flexDirection: 'row',
-    backgroundColor: '#8297D9',
+    backgroundColor: '#202c4b',
     borderRadius: 12,
     height: 52,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     marginTop: 8,
-    shadowColor: '#8297D9',
+    shadowColor: '#202c4b',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -295,7 +321,7 @@ const styles = StyleSheet.create({
   },
   loginLink: {
     fontSize: 14,
-    color: '#8297D9',
+    color: '#202c4b',
     fontWeight: '600',
   },
 });

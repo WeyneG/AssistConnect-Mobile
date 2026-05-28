@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,10 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { login } from './services/api';
+import { login } from './src/services/api';
 
 interface LoginScreenProps {
-  onLoginSuccess: (token: string) => void;
+  onLoginSuccess: (token: string, role: string) => void;
   onForgotPassword: () => void;
   onSignUp: () => void;
   onDemoAccess?: () => void;
@@ -41,7 +41,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
       setIsLoading(false);
 
       if (result.token) {
-        onLoginSuccess(result.token);
+        onLoginSuccess(result.token, result.role || 'funcionario');
       } else {
         Alert.alert('Erro', 'Email ou senha inválidos');
       }
@@ -58,7 +58,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
       return;
     }
 
-    onLoginSuccess('demo-token');
+    onLoginSuccess('demo-token', 'admin');
   };
 
   const handleForgotPasswordPress = () => {
@@ -82,7 +82,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
         {/* Logo */}
         <View style={styles.logoContainer}>
           <View style={styles.logo}>
-            <Ionicons name="heart-circle" size={48} color="#8297D9" />
+            <Ionicons name="heart-circle" size={48} color="#202c4b" />
           </View>
           <Text style={styles.logoText}>AssistConnect</Text>
         </View>
@@ -167,7 +167,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
             onPress={handleDemoAccess}
             activeOpacity={0.8}
           >
-            <Ionicons name="play-circle-outline" size={18} color="#8297D9" />
+            <Ionicons name="play-circle-outline" size={18} color="#202c4b" />
             <Text style={styles.demoButtonText}>Entrar sem backend</Text>
           </TouchableOpacity>
         </View>
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    shadowColor: '#8297D9',
+    shadowColor: '#202c4b',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -296,18 +296,18 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontSize: 14,
-    color: '#8297D9',
+    color: '#202c4b',
     fontWeight: '600',
   },
   loginButton: {
     flexDirection: 'row',
-    backgroundColor: '#8297D9',
+    backgroundColor: '#202c4b',
     borderRadius: 12,
     height: 52,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: '#8297D9',
+    shadowColor: '#202c4b',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   demoButtonText: {
-    color: '#8297D9',
+    color: '#202c4b',
     fontSize: 15,
     fontWeight: '700',
   },
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   },
   signUpLink: {
     fontSize: 14,
-    color: '#8297D9',
+    color: '#202c4b',
     fontWeight: '600',
   },
   footer: {

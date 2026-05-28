@@ -122,7 +122,7 @@ export const MedicamentosPage: React.FC<MedicamentosPageProps> = ({ token }) => 
                 contentContainerStyle={{ paddingBottom: 100 }}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8297D9']} tintColor="#8297D9" />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#202c4b']} tintColor="#202c4b" />
                 }
             >
                 {/* Card de Progresso */}
@@ -141,7 +141,7 @@ export const MedicamentosPage: React.FC<MedicamentosPageProps> = ({ token }) => 
 
                 {loading ? (
                     <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#8297D9" />
+                        <ActivityIndicator size="large" color="#202c4b" />
                     </View>
                 ) : medicamentos.length === 0 ? (
                     <View style={styles.emptyState}>
@@ -156,7 +156,7 @@ export const MedicamentosPage: React.FC<MedicamentosPageProps> = ({ token }) => 
                         <View key={horario} style={styles.horarioGroup}>
                             <View style={styles.horarioHeader}>
                                 <View style={styles.horarioIconContainer}>
-                                    <Ionicons name="time-outline" size={18} color="#8297D9" />
+                                    <Ionicons name="time-outline" size={18} color="#202c4b" />
                                 </View>
                                 <Text style={styles.horarioTitle}>{horario}</Text>
                                 <View style={styles.horarioBadge}>
@@ -261,7 +261,7 @@ export const MedicamentosPage: React.FC<MedicamentosPageProps> = ({ token }) => 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F8FAFC' },
     header: {
-        backgroundColor: '#8297D9',
+        backgroundColor: '#202c4b',
         paddingTop: 50,
         paddingBottom: 24,
         paddingHorizontal: 20,
@@ -290,9 +290,9 @@ const styles = StyleSheet.create({
     },
     progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
     progressTitle: { fontSize: 16, fontWeight: '600', color: '#1F2937' },
-    progressPercentage: { fontSize: 24, fontWeight: '700', color: '#8297D9' },
+    progressPercentage: { fontSize: 24, fontWeight: '700', color: '#202c4b' },
     progressBarContainer: { height: 8, backgroundColor: '#F3F4F6', borderRadius: 4, overflow: 'hidden', marginBottom: 8 },
-    progressBar: { height: '100%', backgroundColor: '#8297D9', borderRadius: 4 },
+    progressBar: { height: '100%', backgroundColor: '#202c4b', borderRadius: 4 },
     progressText: { fontSize: 13, color: '#6B7280' },
     loadingContainer: { paddingVertical: 60, alignItems: 'center' },
     emptyState: { alignItems: 'center', paddingVertical: 60 },
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     },
     horarioTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937', flex: 1 },
     horarioBadge: {
-        backgroundColor: '#8297D9',
+        backgroundColor: '#202c4b',
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 12,
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F3F4F6',
         marginRight: 8,
     },
-    filterChipActive: { backgroundColor: '#8297D9' },
+    filterChipActive: { backgroundColor: '#202c4b' },
     filterChipText: { fontSize: 14, fontWeight: '500', color: '#6B7280' },
     filterChipTextActive: { color: '#FFFFFF' },
     dateInput: {
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
         borderColor: '#E5E7EB',
     },
     applyButton: {
-        backgroundColor: '#8297D9',
+        backgroundColor: '#202c4b',
         borderRadius: 12,
         padding: 16,
         alignItems: 'center',

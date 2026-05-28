@@ -183,12 +183,13 @@ interface CardapioPageProps {
     token?: string;
     onNavigateTab?: (tab: string) => void;
     activeTab?: string;
+    initialDate?: Date;
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export const CardapioPage: React.FC<CardapioPageProps> = ({ token, onNavigateTab, activeTab }) => {
-    const [selectedDate, setSelectedDate] = useState(new Date());
+export const CardapioPage: React.FC<CardapioPageProps> = ({ token, onNavigateTab, activeTab, initialDate }) => {
+    const [selectedDate, setSelectedDate] = useState(initialDate || new Date());
     const [cardapio, setCardapio] = useState<ItemCardapio[]>([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
@@ -239,7 +240,7 @@ export const CardapioPage: React.FC<CardapioPageProps> = ({ token, onNavigateTab
                 <Text style={styles.headerTitle}>Cardápio</Text>
                 {!isToday(selectedDate) && (
                     <TouchableOpacity style={styles.hojeBtn} onPress={irParaHoje}>
-                        <Ionicons name="today-outline" size={16} color="#8297D9" />
+                        <Ionicons name="today-outline" size={16} color="#202c4b" />
                         <Text style={styles.hojeBtnText}>Hoje</Text>
                     </TouchableOpacity>
                 )}
@@ -252,14 +253,14 @@ export const CardapioPage: React.FC<CardapioPageProps> = ({ token, onNavigateTab
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        colors={['#8297D9']}
-                        tintColor="#8297D9"
+                        colors={['#202c4b']}
+                        tintColor="#202c4b"
                     />
                 }
             >
                 {/* Seletor de data */}
                 <View style={styles.dateNav}>
-                    <TouchableOpacity style={styles.dateNavBtn} onPress={() => mudarData(-1)}>
+                    <TouchableOpacity style={styles.dateNavBtn} onPress={() => mudarData(-1)} accessibilityLabel="Dia anterior">
                         <Ionicons name="chevron-back" size={20} color="#6B7280" />
                     </TouchableOpacity>
                     <View style={styles.dateLabelWrap}>
@@ -270,7 +271,7 @@ export const CardapioPage: React.FC<CardapioPageProps> = ({ token, onNavigateTab
                             </View>
                         )}
                     </View>
-                    <TouchableOpacity style={styles.dateNavBtn} onPress={() => mudarData(1)}>
+                    <TouchableOpacity style={styles.dateNavBtn} onPress={() => mudarData(1)} accessibilityLabel="Próximo dia">
                         <Ionicons name="chevron-forward" size={20} color="#6B7280" />
                     </TouchableOpacity>
                 </View>
@@ -304,7 +305,7 @@ export const CardapioPage: React.FC<CardapioPageProps> = ({ token, onNavigateTab
                 {/* Conteúdo */}
                 {loading ? (
                     <View style={styles.loadingWrap}>
-                        <ActivityIndicator size="large" color="#8297D9" />
+                        <ActivityIndicator size="large" color="#202c4b" />
                         <Text style={styles.loadingText}>Carregando cardápio...</Text>
                     </View>
                 ) : error ? (
@@ -345,14 +346,14 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         paddingTop: 52, paddingBottom: 16, paddingHorizontal: 20,
-        backgroundColor: '#8297D9', borderBottomLeftRadius: 30, borderBottomRightRadius: 30,
+        backgroundColor: '#202c4b', borderBottomLeftRadius: 30, borderBottomRightRadius: 30,
     },
     headerTitle: { fontSize: 22, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5 },
     hojeBtn: {
         flexDirection: 'row', alignItems: 'center', gap: 4,
         backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
     },
-    hojeBtnText: { fontSize: 13, fontWeight: '600', color: '#8297D9' },
+    hojeBtnText: { fontSize: 13, fontWeight: '600', color: '#202c4b' },
 
     // Seletor de data
     dateNav: {
@@ -367,7 +368,7 @@ const styles = StyleSheet.create({
     dateLabelWrap: { flex: 1, alignItems: 'center', gap: 4 },
     dateLabel: { fontSize: 13, fontWeight: '600', color: '#1F2937', textAlign: 'center' },
     todayBadge: { backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 2, borderRadius: 10 },
-    todayBadgeText: { fontSize: 11, fontWeight: '600', color: '#8297D9' },
+    todayBadgeText: { fontSize: 11, fontWeight: '600', color: '#202c4b' },
 
     // Resumo
     summaryRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 10, marginBottom: 8 },
@@ -427,7 +428,7 @@ const styles = StyleSheet.create({
     loadingText: { fontSize: 14, color: '#9CA3AF' },
     errorWrap: { alignItems: 'center', paddingTop: 60, gap: 12, paddingHorizontal: 40 },
     errorText: { fontSize: 14, color: '#6B7280', textAlign: 'center' },
-    retryBtn: { backgroundColor: '#8297D9', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
+    retryBtn: { backgroundColor: '#202c4b', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
     retryText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
     emptyWrap: { alignItems: 'center', paddingTop: 60, gap: 12 },
     emptyText: { fontSize: 14, color: '#9CA3AF' },

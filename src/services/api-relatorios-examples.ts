@@ -6,6 +6,19 @@
  * de forma gradual, começando com dados simulados e evoluindo para dados reais.
  */
 
+const API_BASE_URL = 'http://192.168.1.114:8080/api';
+
+export interface ReportData {
+    labels: string[];
+    values: number[];
+    summary: {
+        total: number;
+        average: number;
+        highest: string;
+        lowest: string;
+    };
+}
+
 // ─── PASSO 1: Adicionar tipos no api.ts ───────────────────────────────────
 
 export interface RelatorioSaude {
