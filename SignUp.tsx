@@ -47,12 +47,18 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onBackToLogin }) => 
       setIsLoading(true);
       await cadastrarUsuario(name, email, password);
       setIsLoading(false);
-      
-      // Redireciona imediatamente para a tela de login
-      onBackToLogin();
-      
-      // Exibe a notificação de sucesso sobre a tela de login
-      Alert.alert('Sucesso', 'Conta criada com sucesso! Faça login para continuar.');
+
+      // Exibe a notificação de sucesso ANTES de redirecionar
+      Alert.alert(
+        'Sucesso',
+        'Conta criada com sucesso! Faça login para continuar.',
+        [
+          {
+            text: 'OK',
+            onPress: () => onBackToLogin()
+          }
+        ]
+      );
     } catch (error: any) {
       setIsLoading(false);
       Alert.alert('Erro ao cadastrar', error.message || 'Não foi possível conectar ao servidor');
