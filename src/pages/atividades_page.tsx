@@ -16,12 +16,11 @@ interface AtividadesPageProps {
     onFiltrosChange?: (filtros: FiltrosAtividade) => void;
 }
 
-const TIPO_
 // ─── Configurações visuais por tipo e status ─────────────────────────────────
 
 const TIPO_CONFIG: Record<TipoAtividade, { label: string; icon: string; cor: string; bg: string }> = {
     medicacao: { label: 'Medicação', icon: 'medical', cor: '#EF4444', bg: '#FEE2E2' },
-    fisioterapia: { label: 'Fisioterapia', icon: 'fitness', cor: '#8297D9', bg: '#EEF2FF' },
+    fisioterapia: { label: 'Fisioterapia', icon: 'fitness', cor: '#202c4b', bg: '#EEF2FF' },
     consulta: { label: 'Consulta', icon: 'stethoscope', cor: '#212B48', bg: '#E8EAF0' },
     lazer: { label: 'Lazer', icon: 'game-controller', cor: '#10B981', bg: '#ECFDF5' },
     alimentacao: { label: 'Alimentação', icon: 'restaurant', cor: '#F59E0B', bg: '#FEF3C7' },
@@ -40,7 +39,7 @@ const ChipFiltro: React.FC<{ label: string; onRemove: () => void }> = ({ label, 
     <View style={chipStyles.container}>
         <Text style={chipStyles.label}>{label}</Text>
         <TouchableOpacity onPress={onRemove} hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}>
-            <Ionicons name="close" size={14} color="#8297D9" />
+            <Ionicons name="close" size={14} color="#202c4b" />
         </TouchableOpacity>
     </View>
 );
@@ -50,9 +49,9 @@ const chipStyles = StyleSheet.create({
         flexDirection: 'row', alignItems: 'center', gap: 4,
         backgroundColor: '#EEF2FF', borderRadius: 20,
         paddingHorizontal: 10, paddingVertical: 5,
-        borderWidth: 1, borderColor: '#8297D9',
+        borderWidth: 1, borderColor: '#202c4b',
     },
-    label: { fontSize: 12, fontWeight: '600', color: '#8297D9' },
+    label: { fontSize: 12, fontWeight: '600', color: '#202c4b' },
 });
 
 // ─── Card de atividade ───────────────────────────────────────────────────────
@@ -104,7 +103,7 @@ const cardStyles = StyleSheet.create({
     },
     info: { flex: 1 },
     titulo: { fontSize: 15, fontWeight: '600', color: '#1F2937', marginBottom: 2 },
-    residente: { fontSize: 12, color: '#8297D9', fontWeight: '500', marginBottom: 4 },
+    residente: { fontSize: 12, color: '#202c4b', fontWeight: '500', marginBottom: 4 },
     meta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     metaText: { fontSize: 11, color: '#9CA3AF' },
     dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#D1D5DB' },
@@ -281,12 +280,12 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
             {/* Lista */}
             {loading ? (
                 <View style={styles.centered}>
-                    <ActivityIndicator size="large" color="#8297D9" />
+                    <ActivityIndicator size="large" color="#202c4b" />
                     <Text style={styles.loadingText}>Carregando atividades...</Text>
                 </View>
             ) : error ? (
                 <View style={styles.centered}>
-                    <Ionicons name="cloud-offline-outline" size={48} color="#8297D9" />
+                    <Ionicons name="cloud-offline-outline" size={48} color="#202c4b" />
                     <Text style={styles.errorTitle}>Sem conexão</Text>
                     <Text style={styles.errorMsg}>{error}</Text>
                     <TouchableOpacity style={styles.retryBtn} onPress={() => { setLoading(true); carregarDados(); }}>
@@ -300,7 +299,7 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
                     renderItem={({ item }) => <CardAtividade atividade={item} />}
                     contentContainerStyle={styles.listContent}
                     showsVerticalScrollIndicator={false}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8297D9']} tintColor="#8297D9" />}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#202c4b']} tintColor="#202c4b" />}
                     ListHeaderComponent={
                         atividades.length > 0 ? (
                             <Text style={styles.resultCount}>
@@ -339,7 +338,7 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem}>
                     <View style={styles.navItemActive}>
-                        <Ionicons name="calendar" size={22} color="#8297D9" />
+                        <Ionicons name="calendar" size={22} color="#202c4b" />
                     </View>
                     <Text style={styles.navItemTextActive}>Agenda</Text>
                 </TouchableOpacity>
@@ -355,7 +354,7 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F8FAFC' },
     header: {
-        backgroundColor: '#8297D9',
+        backgroundColor: '#202c4b',
         paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20,
         borderBottomLeftRadius: 30, borderBottomRightRadius: 30,
     },
@@ -370,7 +369,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
         backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB',
     },
-    filterChipActive: { backgroundColor: '#8297D9', borderColor: '#8297D9' },
+    filterChipActive: { backgroundColor: '#202c4b', borderColor: '#202c4b' },
     filterChipText: { fontSize: 13, fontWeight: '500', color: '#6B7280' },
     filterChipTextActive: { color: '#FFFFFF' },
     statusDotInline: { width: 6, height: 6, borderRadius: 3, marginRight: 5 },
@@ -390,7 +389,7 @@ const styles = StyleSheet.create({
     loadingText: { marginTop: 12, fontSize: 14, color: '#6B7280' },
     errorTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937', marginTop: 12 },
     errorMsg: { fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 6 },
-    retryBtn: { marginTop: 20, backgroundColor: '#8297D9', paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 },
+    retryBtn: { marginTop: 20, backgroundColor: '#202c4b', paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 },
     retryBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
     listContent: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20 },
     resultCount: { fontSize: 13, color: '#6B7280', fontWeight: '500', marginBottom: 12 },
@@ -402,5 +401,5 @@ const styles = StyleSheet.create({
     navItem: { flex: 1, alignItems: 'center', gap: 4 },
     navItemActive: { backgroundColor: '#EEF2FF', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
     navItemText: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
-    navItemTextActive: { fontSize: 11, color: '#8297D9', fontWeight: '600' },
+    navItemTextActive: { fontSize: 11, color: '#202c4b', fontWeight: '600' },
 });

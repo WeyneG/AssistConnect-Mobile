@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { LoginScreen } from './Home';
 import { ForgotPasswordScreen } from './ForgotPassword';
@@ -11,16 +11,20 @@ type Screen = 'login' | 'forgotPassword' | 'signUp' | 'home' | 'perfilIdoso';
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
   const [userToken, setUserToken] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [idosoSelecionadoId, setIdosoSelecionadoId] = useState<number | null>(null);
+  const [idosoInitialSection, setIdosoInitialSection] = useState<'ficha' | 'medicamentos' | 'atividades'>('ficha');
 
-  const handleLoginSuccess = (token: string) => {
+  const handleLoginSuccess = (token: string, role: string) => {
     setUserToken(token);
+    setUserRole(role);
     setIdosoSelecionadoId(null);
     setCurrentScreen('home');
   };
 
   const handleDemoAccess = () => {
     setUserToken(null);
+    setUserRole('admin'); // Admins por padrão no modo demo para permitir testar todas as funcionalidades de edição
     setIdosoSelecionadoId(null);
     setCurrentScreen('home');
   };
@@ -29,13 +33,15 @@ export default function App() {
   const handleSignUp = () => setCurrentScreen('signUp');
   const handleBackToLogin = () => {
     setUserToken(null);
+    setUserRole(null);
     setIdosoSelecionadoId(null);
     setCurrentScreen('login');
   };
   const handleBackToHome = () => setCurrentScreen('home');
 
-  const handleVerPerfil = (idosoId: number) => {
+  const handleVerPerfil = (idosoId: number, section: 'ficha' | 'medicamentos' | 'atividades' = 'ficha') => {
     setIdosoSelecionadoId(idosoId);
+    setIdosoInitialSection(section);
     setCurrentScreen('perfilIdoso');
   };
 
@@ -63,7 +69,9 @@ export default function App() {
         <PerfilIdosoPage
           idosoId={idosoSelecionadoId}
           token={userToken || undefined}
+          userRole={userRole || undefined}
           onBack={handleBackToHome}
+          initialSection={idosoInitialSection}
         />
         <StatusBar style="light" />
       </>
@@ -88,6 +96,7 @@ export default function App() {
     <>
       <HomePage
         token={userToken || undefined}
+        userRole={userRole || undefined}
         onLogout={handleBackToLogin}
         onVerPerfil={handleVerPerfil}
       />

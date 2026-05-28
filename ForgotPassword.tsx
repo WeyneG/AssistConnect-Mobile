@@ -10,6 +10,7 @@ import {
     ScrollView,
     Alert,
 } from 'react-native';
+import { solicitarRecuperacaoSenha } from './src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 
 interface ForgotPasswordScreenProps {
@@ -20,21 +21,25 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ onBa
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleResetPassword = () => {
+    const handleResetPassword = async () => {
         if (!email) {
             Alert.alert('Atenção', 'Por favor, insira seu e-mail');
             return;
         }
 
-        setIsLoading(true);
-        setTimeout(() => {
+        try {
+            setIsLoading(true);
+            const msg = await solicitarRecuperacaoSenha(email);
             setIsLoading(false);
             Alert.alert(
                 'E-mail enviado!',
-                'Verifique sua caixa de entrada para redefinir sua senha.',
+                msg || 'Verifique sua caixa de entrada para redefinir sua senha.',
                 [{ text: 'OK', onPress: onBackToLogin }]
             );
-        }, 1500);
+        } catch (error: any) {
+            setIsLoading(false);
+            Alert.alert('Erro ao enviar', error.message || 'Não foi possível conectar ao servidor');
+        }
     };
 
     return (
@@ -55,7 +60,7 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ onBa
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.iconContainer}>
-                        <Ionicons name="key" size={32} color="#8297D9" />
+                        <Ionicons name="key" size={32} color="#202c4b" />
                     </View>
                     <Text style={styles.title}>Esqueceu a senha?</Text>
                     <Text style={styles.subtitle}>
@@ -109,7 +114,7 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ onBa
 
                 {/* Info Box */}
                 <View style={styles.infoBox}>
-                    <Ionicons name="information-circle" size={20} color="#8297D9" />
+                    <Ionicons name="information-circle" size={20} color="#202c4b" />
                     <Text style={styles.infoText}>
                         O e-mail pode levar alguns minutos para chegar. Verifique também sua pasta de spam.
                     </Text>
@@ -155,7 +160,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 20,
-        shadowColor: '#8297D9',
+        shadowColor: '#202c4b',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 12,
@@ -213,13 +218,13 @@ const styles = StyleSheet.create({
     },
     resetButton: {
         flexDirection: 'row',
-        backgroundColor: '#8297D9',
+        backgroundColor: '#202c4b',
         borderRadius: 12,
         height: 52,
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        shadowColor: '#8297D9',
+        shadowColor: '#202c4b',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -242,7 +247,7 @@ const styles = StyleSheet.create({
     },
     loginLink: {
         fontSize: 14,
-        color: '#8297D9',
+        color: '#202c4b',
         fontWeight: '600',
     },
     infoBox: {

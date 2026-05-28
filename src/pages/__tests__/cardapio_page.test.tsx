@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { CardapioPage } from '../cardapio_page';
 import * as api from '../../services/api';
 
@@ -74,7 +74,7 @@ describe('CardapioPage', () => {
     it('deve exibir o cardápio do dia atual corretamente', async () => {
         (api.buscarCardapio as jest.Mock).mockResolvedValue(mockCardapioHoje);
 
-        const { getByText, getAllByText } = render(<CardapioPage />);
+        const { getByText, getAllByText } = render(<CardapioPage initialDate={new Date(2026, 3, 30)} />);
 
         await waitFor(() => {
             expect(getByText('Café da Manhã')).toBeTruthy();
@@ -94,7 +94,7 @@ describe('CardapioPage', () => {
             .mockResolvedValueOnce(mockCardapioHoje)
             .mockResolvedValueOnce(mockCardapioOutroDia);
 
-        const { getByText, getByLabelText } = render(<CardapioPage />);
+        const { getByText, getByLabelText } = render(<CardapioPage initialDate={new Date(2026, 3, 30)} />);
 
         await waitFor(() => {
             expect(getByText('Café da Manhã')).toBeTruthy();
@@ -114,7 +114,7 @@ describe('CardapioPage', () => {
     it('deve exibir status servida e pendente corretamente', async () => {
         (api.buscarCardapio as jest.Mock).mockResolvedValue(mockCardapioHoje);
 
-        const { getByText, getAllByText } = render(<CardapioPage />);
+        const { getByText, getAllByText } = render(<CardapioPage initialDate={new Date(2026, 3, 30)} />);
 
         await waitFor(() => {
             expect(getByText('Café da Manhã')).toBeTruthy();
@@ -133,7 +133,7 @@ describe('CardapioPage', () => {
     it('deve exibir restrições alimentares corretamente', async () => {
         (api.buscarCardapio as jest.Mock).mockResolvedValue(mockCardapioHoje);
 
-        const { getByText } = render(<CardapioPage />);
+        const { getByText } = render(<CardapioPage initialDate={new Date(2026, 3, 30)} />);
 
         await waitFor(() => {
             expect(getByText('Café da Manhã')).toBeTruthy();
@@ -153,7 +153,7 @@ describe('CardapioPage', () => {
     it('deve exibir observações quando expandido', async () => {
         (api.buscarCardapio as jest.Mock).mockResolvedValue(mockCardapioHoje);
 
-        const { getByText } = render(<CardapioPage />);
+        const { getByText } = render(<CardapioPage initialDate={new Date(2026, 3, 30)} />);
 
         await waitFor(() => {
             expect(getByText('Almoço')).toBeTruthy();
@@ -172,7 +172,7 @@ describe('CardapioPage', () => {
     it('deve exibir lista de alimentos quando expandido', async () => {
         (api.buscarCardapio as jest.Mock).mockResolvedValue(mockCardapioHoje);
 
-        const { getByText } = render(<CardapioPage />);
+        const { getByText } = render(<CardapioPage initialDate={new Date(2026, 3, 30)} />);
 
         await waitFor(() => {
             expect(getByText('Café da Manhã')).toBeTruthy();
@@ -194,7 +194,7 @@ describe('CardapioPage', () => {
     it('deve exibir calorias quando expandido', async () => {
         (api.buscarCardapio as jest.Mock).mockResolvedValue(mockCardapioHoje);
 
-        const { getByText } = render(<CardapioPage />);
+        const { getByText } = render(<CardapioPage initialDate={new Date(2026, 3, 30)} />);
 
         await waitFor(() => {
             expect(getByText('Café da Manhã')).toBeTruthy();
@@ -213,7 +213,7 @@ describe('CardapioPage', () => {
     it('deve recarregar dados ao fazer pull-to-refresh', async () => {
         (api.buscarCardapio as jest.Mock).mockResolvedValue(mockCardapioHoje);
 
-        const { getByTestId } = render(<CardapioPage />);
+        const { getByTestId } = render(<CardapioPage initialDate={new Date(2026, 3, 30)} />);
 
         await waitFor(() => {
             expect(api.buscarCardapio).toHaveBeenCalledTimes(1);
@@ -221,7 +221,9 @@ describe('CardapioPage', () => {
 
         // Simula pull-to-refresh
         const scrollView = getByTestId('cardapio-scroll');
-        fireEvent(scrollView, 'refresh');
+        await act(async () => {
+            await scrollView.props.refreshControl.props.onRefresh();
+        });
 
         await waitFor(() => {
             expect(api.buscarCardapio).toHaveBeenCalledTimes(2);
@@ -232,13 +234,12 @@ describe('CardapioPage', () => {
     it('deve exibir resumo correto (servidas/pendentes)', async () => {
         (api.buscarCardapio as jest.Mock).mockResolvedValue(mockCardapioHoje);
 
-        const { getByText } = render(<CardapioPage />);
+        const { getByText, getAllByText } = render(<CardapioPage initialDate={new Date(2026, 3, 30)} />);
 
         await waitFor(() => {
-            // 2 servidas (café e almoço)
-            expect(getByText('2')).toBeTruthy();
-            // 2 pendentes (lanche e jantar)
-            expect(getByText('2')).toBeTruthy();
+            // 2 servidas (café e almoço) e 2 pendentes (lanche e jantar)
+            const dois = getAllByText('2');
+            expect(dois.length).toBe(2);
             // 4 refeições no total
             expect(getByText('4')).toBeTruthy();
         });
@@ -248,7 +249,7 @@ describe('CardapioPage', () => {
     it('deve exibir dados demo quando API falha', async () => {
         (api.buscarCardapio as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-        const { getByText } = render(<CardapioPage />);
+        const { getByText } = render(<CardapioPage initialDate={new Date(2026, 3, 30)} />);
 
         await waitFor(() => {
             expect(getByText('Café da Manhã')).toBeTruthy();

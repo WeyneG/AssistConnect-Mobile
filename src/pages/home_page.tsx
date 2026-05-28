@@ -8,25 +8,25 @@ import {
     ActivityIndicator,
     RefreshControl,
     Alert,
+    Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { buscarIdosos, buscarResumo, Idoso, ResumoIdosos, FiltrosAtividade } from '../services/api';
 import { BottomTabBar } from '../components/BottomTabBar';
 import { ElderlyListScreen } from './elderly_list';
 import { AgendaPage } from './agenda_page';
-import { CardapioPage } from './cardapio_page';
 import { ReportsDashboard } from './reports_dashboard';
-import { MedicamentosPage } from './medicamentos_page';
 import { Image } from 'react-native';
 import { getFotoUri } from '../services/api';
 
 interface HomePageProps {
     token?: string;
+    userRole?: string;
     onLogout: () => void;
-    onVerPerfil: (idosoId: number) => void;
+    onVerPerfil: (idosoId: number, section?: 'ficha' | 'medicamentos' | 'atividades') => void;
 }
 
-type NavigationPage = 'home' | 'elderly' | 'agenda' | 'cardapio' | 'medicamentos' | 'reports' | 'profile';
+type NavigationPage = 'home' | 'elderly' | 'agenda' | 'reports' | 'profile';
 
 const bottomTabs: Array<{
     key: NavigationPage;
@@ -37,18 +37,19 @@ const bottomTabs: Array<{
         { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
         { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
         { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
+        { key: 'reports', label: 'Relatórios', activeIcon: 'bar-chart', inactiveIcon: 'bar-chart-outline' },
         { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
     ];
 
 // ─── Tela de Perfil simples ───────────────────────────────────────────────────
 const PerfilTab: React.FC<{ onLogout: () => void; onNavigateTab: (tab: string) => void; activeTab: string }> = ({ onLogout, onNavigateTab, activeTab }) => (
     <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-        <View style={{ backgroundColor: '#8297D9', paddingTop: 50, paddingBottom: 24, paddingHorizontal: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}>
+        <View style={{ backgroundColor: '#202c4b', paddingTop: 50, paddingBottom: 24, paddingHorizontal: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}>
             <Text style={{ fontSize: 28, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5 }}>Perfil</Text>
         </View>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
             <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                <Ionicons name="person" size={48} color="#8297D9" />
+                <Ionicons name="person" size={48} color="#202c4b" />
             </View>
             <Text style={{ fontSize: 20, fontWeight: '700', color: '#1F2937', marginBottom: 4 }}>Cuidador</Text>
             <Text style={{ fontSize: 14, color: '#6B7280', marginBottom: 32 }}>AssistConnect</Text>
@@ -65,13 +66,15 @@ const PerfilTab: React.FC<{ onLogout: () => void; onNavigateTab: (tab: string) =
     </View>
 );
 
-export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil }) => {
+export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, onVerPerfil }) => {
     const [currentPage, setCurrentPage] = useState<NavigationPage>('home');
+    const [agendaTab, setAgendaTab] = useState<'atividades' | 'cardapio'>('atividades');
     const [idosos, setIdosos] = useState<Idoso[]>([]);
     const [resumo, setResumo] = useState<ResumoIdosos | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [modalMedicamentosVisible, setModalMedicamentosVisible] = useState(false);
 
     useEffect(() => {
         carregarDados();
@@ -107,8 +110,12 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
         return (
             <ElderlyListScreen
                 token={token}
+                userRole={userRole}
                 onBack={() => setCurrentPage('home')}
-                onNavigateTab={(tab) => setCurrentPage(tab as NavigationPage)}
+                onNavigateTab={(tab) => {
+                    if (tab === 'agenda') setAgendaTab('atividades');
+                    setCurrentPage(tab as NavigationPage);
+                }}
                 activeTab={currentPage}
             />
         );
@@ -118,38 +125,13 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
     if (currentPage === 'agenda') {
         return (
             <View style={{ flex: 1 }}>
-                <AgendaPage />
+                <AgendaPage initialTab={agendaTab} onTabChange={setAgendaTab} userRole={userRole} token={token} />
                 <BottomTabBar
                     activeTab={currentPage}
-                    onTabPress={(tab) => setCurrentPage(tab as NavigationPage)}
-                    tabs={bottomTabs}
-                />
-            </View>
-        );
-    }
-
-    // Mostrar cardápio
-    if (currentPage === 'cardapio') {
-        return (
-            <View style={{ flex: 1 }}>
-                <CardapioPage token={token} />
-                <BottomTabBar
-                    activeTab={currentPage}
-                    onTabPress={(tab) => setCurrentPage(tab as NavigationPage)}
-                    tabs={bottomTabs}
-                />
-            </View>
-        );
-    }
-
-    // Mostrar medicamentos
-    if (currentPage === 'medicamentos') {
-        return (
-            <View style={{ flex: 1 }}>
-                <MedicamentosPage token={token} />
-                <BottomTabBar
-                    activeTab={currentPage}
-                    onTabPress={(tab) => setCurrentPage(tab as NavigationPage)}
+                    onTabPress={(tab) => {
+                        if (tab === 'agenda') setAgendaTab('atividades');
+                        setCurrentPage(tab as NavigationPage);
+                    }}
                     tabs={bottomTabs}
                 />
             </View>
@@ -162,12 +144,18 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
             <View style={{ flex: 1 }}>
                 <ReportsDashboard
                     token={token}
-                    onNavigateTab={(tab) => setCurrentPage(tab as NavigationPage)}
+                    onNavigateTab={(tab) => {
+                        if (tab === 'agenda') setAgendaTab('atividades');
+                        setCurrentPage(tab as NavigationPage);
+                    }}
                     activeTab={currentPage}
                 />
                 <BottomTabBar
                     activeTab={currentPage}
-                    onTabPress={(tab) => setCurrentPage(tab as NavigationPage)}
+                    onTabPress={(tab) => {
+                        if (tab === 'agenda') setAgendaTab('atividades');
+                        setCurrentPage(tab as NavigationPage);
+                    }}
                     tabs={bottomTabs}
                 />
             </View>
@@ -179,7 +167,10 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
         return (
             <PerfilTab
                 onLogout={onLogout}
-                onNavigateTab={(tab) => setCurrentPage(tab as NavigationPage)}
+                onNavigateTab={(tab) => {
+                    if (tab === 'agenda') setAgendaTab('atividades');
+                    setCurrentPage(tab as NavigationPage);
+                }}
                 activeTab={currentPage}
             />
         );
@@ -205,18 +196,18 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
                 contentContainerStyle={{ paddingTop: 20 }}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8297D9']} tintColor="#8297D9" />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#202c4b']} tintColor="#202c4b" />
                 }
             >
                 {loading ? (
                     <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#8297D9" />
+                        <ActivityIndicator size="large" color="#202c4b" />
                         <Text style={styles.loadingText}>Carregando...</Text>
                     </View>
                 ) : error ? (
                     <View style={styles.errorContainer}>
                         <View style={styles.errorIcon}>
-                            <Ionicons name="cloud-offline-outline" size={48} color="#8297D9" />
+                            <Ionicons name="cloud-offline-outline" size={48} color="#202c4b" />
                         </View>
                         <Text style={styles.errorTitle}>Sem conexão</Text>
                         <Text style={styles.errorMessage}>{error}</Text>
@@ -231,7 +222,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
                             <View style={styles.statsContainer}>
                                 <View style={styles.statCard}>
                                     <View style={styles.statIconContainer}>
-                                        <Ionicons name="people" size={18} color="#8297D9" />
+                                        <Ionicons name="people" size={18} color="#202c4b" />
                                     </View>
                                     <View style={styles.statInfo}>
                                         <Text style={styles.statNumber}>{resumo.total}</Text>
@@ -261,7 +252,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
 
                         {/* Cards de Acesso Rápido */}
                         <View style={styles.quickAccessContainer}>
-                            <TouchableOpacity style={styles.quickAccessCard} onPress={() => setCurrentPage('cardapio')} activeOpacity={0.8}>
+                            <TouchableOpacity style={styles.quickAccessCard} onPress={() => { setAgendaTab('cardapio'); setCurrentPage('agenda'); }} activeOpacity={0.8}>
                                 <View style={[styles.quickAccessIcon, { backgroundColor: '#FEF3C7' }]}>
                                     <Ionicons name="restaurant" size={24} color="#F59E0B" />
                                 </View>
@@ -269,7 +260,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
                                 <Text style={styles.quickAccessSubtitle}>Refeições do dia</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity style={styles.quickAccessCard} onPress={() => setCurrentPage('medicamentos')} activeOpacity={0.8}>
+                            <TouchableOpacity style={styles.quickAccessCard} onPress={() => setModalMedicamentosVisible(true)} activeOpacity={0.8}>
                                 <View style={[styles.quickAccessIcon, { backgroundColor: '#DBEAFE' }]}>
                                     <Ionicons name="medical" size={24} color="#3B82F6" />
                                 </View>
@@ -325,7 +316,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
                                                         style={{ width: 56, height: 56, borderRadius: 28 }}
                                                     />
                                                 ) : (
-                                                    <Ionicons name="person" size={24} color="#8297D9" />
+                                                    <Ionicons name="person" size={24} color="#202c4b" />
                                                 )}
                                             </View>
 
@@ -395,16 +386,85 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
                 <View style={{ height: 100 }} />
             </ScrollView>
 
+            {/* Modal de Seleção de Residente para Medicamentos */}
+            <Modal
+                visible={modalMedicamentosVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setModalMedicamentosVisible(false)}
+            >
+                <TouchableOpacity 
+                    style={styles.modalOverlay} 
+                    activeOpacity={1} 
+                    onPress={() => setModalMedicamentosVisible(false)} 
+                />
+                <View style={styles.modalSheet}>
+                    <View style={styles.modalHandle} />
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Selecionar Residente</Text>
+                        <TouchableOpacity onPress={() => setModalMedicamentosVisible(false)}>
+                            <Ionicons name="close" size={24} color="#4B5563" />
+                        </TouchableOpacity>
+                    </View>
+                    <Text style={styles.modalSubtitle}>
+                        Selecione um idoso cadastrado para visualizar e gerenciar sua medicação diária.
+                    </Text>
+
+                    {idosos.length === 0 ? (
+                        <View style={styles.emptyStateContainer}>
+                            <Ionicons name="people-outline" size={40} color="#9CA3AF" />
+                            <Text style={styles.emptyStateText}>Nenhum idoso cadastrado para exibir.</Text>
+                        </View>
+                    ) : (
+                        <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
+                            {idosos.map((idoso) => {
+                                const fotoUri = getFotoUri(idoso.fotoUrl);
+                                return (
+                                    <TouchableOpacity
+                                        key={idoso.id}
+                                        style={styles.modalItem}
+                                        onPress={() => {
+                                            setModalMedicamentosVisible(false);
+                                            onVerPerfil(idoso.id, 'medicamentos');
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={styles.modalAvatar}>
+                                            {fotoUri ? (
+                                                <Image
+                                                    source={{ uri: fotoUri + '?t=' + Date.now() }}
+                                                    style={{ width: 40, height: 40, borderRadius: 20 }}
+                                                />
+                                            ) : (
+                                                <Ionicons name="person" size={20} color="#202c4b" />
+                                            )}
+                                        </View>
+                                        <View style={styles.modalItemInfo}>
+                                            <Text style={styles.modalItemName}>{idoso.nome}</Text>
+                                            <Text style={styles.modalItemSub}>{idoso.idade} anos • Quarto {idoso.quarto || 'N/A'}</Text>
+                                        </View>
+                                        <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
+                    )}
+                </View>
+            </Modal>
+
             {/* Floating Action Button */}
-            {currentPage !== 'agenda' && (
-                <TouchableOpacity style={styles.fab} onPress={() => setCurrentPage('agenda')}>
+            {(currentPage as string) !== 'agenda' && (
+                <TouchableOpacity style={styles.fab} onPress={() => { setAgendaTab('atividades'); setCurrentPage('agenda'); }}>
                     <Ionicons name="add" size={28} color="#FFFFFF" />
                 </TouchableOpacity>
             )}
 
             <BottomTabBar
                 activeTab={currentPage}
-                onTabPress={(tab) => setCurrentPage(tab as NavigationPage)}
+                onTabPress={(tab) => {
+                    if (tab === 'agenda') setAgendaTab('atividades');
+                    setCurrentPage(tab as NavigationPage);
+                }}
                 tabs={bottomTabs}
             />
         </View>
@@ -414,7 +474,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, onLogout, onVerPerfil
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F8FAFC' },
     header: {
-        backgroundColor: '#8297D9',
+        backgroundColor: '#202c4b',
         paddingTop: 50,
         paddingBottom: 24,
         paddingHorizontal: 20,
@@ -436,7 +496,7 @@ const styles = StyleSheet.create({
     errorIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
     errorTitle: { fontSize: 20, fontWeight: '700', color: '#1F2937', marginBottom: 8 },
     errorMessage: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 },
-    retryButton: { marginTop: 24, backgroundColor: '#8297D9', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12 },
+    retryButton: { marginTop: 24, backgroundColor: '#202c4b', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12 },
     retryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
     statsContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 8 },
     statCard: {
@@ -476,7 +536,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         padding: 18,
         alignItems: 'center',
-        shadowColor: '#8297D9',
+        shadowColor: '#202c4b',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 12,
@@ -540,7 +600,35 @@ const styles = StyleSheet.create({
     emptySubtext: { fontSize: 14, color: '#9CA3AF' },
     fab: {
         position: 'absolute', right: 20, bottom: 90, width: 56, height: 56, borderRadius: 28,
-        backgroundColor: '#8297D9', alignItems: 'center', justifyContent: 'center',
-        shadowColor: '#8297D9', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
+        backgroundColor: '#202c4b', alignItems: 'center', justifyContent: 'center',
+        shadowColor: '#202c4b', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
     },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+    modalSheet: { 
+        backgroundColor: '#FFFFFF', 
+        borderTopLeftRadius: 24, 
+        borderTopRightRadius: 24, 
+        padding: 20, 
+        paddingBottom: 36,
+        maxHeight: '80%'
+    },
+    modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB', alignSelf: 'center', marginBottom: 16 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+    modalTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937' },
+    modalSubtitle: { fontSize: 13, color: '#6B7280', marginBottom: 16, lineHeight: 18 },
+    modalList: { marginTop: 8 },
+    modalItem: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        paddingVertical: 12, 
+        borderBottomWidth: 1, 
+        borderBottomColor: '#F3F4F6',
+        gap: 12
+    },
+    modalAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
+    modalItemInfo: { flex: 1 },
+    modalItemName: { fontSize: 14, fontWeight: '600', color: '#1F2937' },
+    modalItemSub: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
+    emptyStateContainer: { alignItems: 'center', paddingVertical: 40, gap: 8 },
+    emptyStateText: { fontSize: 13, color: '#9CA3AF' },
 });

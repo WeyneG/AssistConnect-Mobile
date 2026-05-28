@@ -24,7 +24,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ tabs, activeTab, onT
             return (
                 <TouchableOpacity key={tab.key} style={styles.navItem} onPress={() => onTabPress(tab.key)} activeOpacity={0.75}>
                     {isActive
-                        ? <View style={styles.navItemActive}><Ionicons name={tab.activeIcon} size={22} color="#8297D9" /></View>
+                        ? <View style={styles.navItemActive}><Ionicons name={tab.activeIcon} size={22} color="#202c4b" /></View>
                         : <Ionicons name={tab.inactiveIcon} size={22} color="#9CA3AF" />
                     }
                     <Text style={isActive ? styles.navItemTextActive : styles.navItemText}>{tab.label}</Text>
@@ -39,5 +39,5 @@ const styles = StyleSheet.create({
     navItem: { flex: 1, alignItems: 'center', gap: 4 },
     navItemActive: { backgroundColor: '#EEF2FF', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
     navItemText: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
-    navItemTextActive: { fontSize: 11, color: '#8297D9', fontWeight: '600' },
+    navItemTextActive: { fontSize: 11, color: '#202c4b', fontWeight: '600' },
 });
