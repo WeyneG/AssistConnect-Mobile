@@ -110,7 +110,7 @@ export const solicitarRecuperacaoSenha = async (email: string): Promise<string> 
     return await response.text();
 };
 
-export const buscarIdosos = async (token?: string, page?: number, size?: number): Promise<Idoso[]> => {
+export const buscarIdosos = async (token?: string, page: number = 0, size: number = 10): Promise<Idoso[]> => {
     const idososMock: Idoso[] = [
         {
             id: 1,
@@ -151,14 +151,19 @@ export const buscarIdosos = async (token?: string, page?: number, size?: number)
     ];
 
     if (!token || token === 'demo-token') {
-        return idososMock;
+        // Aplica paginação no mock
+        const start = page * size;
+        const end = start + size;
+        return idososMock.slice(start, end);
     }
 
     try {
         const headers: any = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
 
-        const response = await fetch(`${API_BASE_URL}/idosos`, { method: 'GET', headers });
+        // Adiciona parâmetros de paginação na URL
+        const url = `${API_BASE_URL}/idosos?page=${page}&size=${size}`;
+        const response = await fetch(url, { method: 'GET', headers });
         if (!response.ok) throw new Error('Erro ao buscar idosos');
 
         const data = await response.json();
@@ -370,7 +375,7 @@ export const normalizarData = (dataVal: any): string => {
     if (typeof dataVal === 'string') {
         const cleanStr = dataVal.trim();
         const datePart = cleanStr.split(/[T ]/)[0]; // extracts 'YYYY-MM-DD' or 'DD/MM/YYYY'
-        
+
         if (datePart.includes('-')) {
             const parts = datePart.split('-');
             if (parts[0].length === 4) {
@@ -398,7 +403,7 @@ export const normalizarData = (dataVal: any): string => {
         const year = dataVal.year;
         const monthNum = dataVal.monthValue !== undefined ? dataVal.monthValue : (typeof dataVal.month === 'number' ? dataVal.month : undefined);
         const day = dataVal.dayOfMonth !== undefined ? dataVal.dayOfMonth : dataVal.day;
-        
+
         if (year !== undefined && day !== undefined) {
             let mStr = '';
             if (monthNum !== undefined) {
@@ -441,9 +446,9 @@ export const buscarCardapio = async (data: string, token?: string): Promise<Item
 
     const response = await fetch(`${API_BASE_URL}/cardapios`, { method: 'GET', headers });
     if (!response.ok) throw new Error(`Erro ${response.status}: Falha ao buscar cardápio`);
-    
+
     const cardapios: any[] = await response.json();
-    
+
     const cardapioDoDia = cardapios.find(c => {
         const cDateStr = normalizarData(c.data);
         const queryDateStr = normalizarData(data);
@@ -456,10 +461,10 @@ export const buscarCardapio = async (data: string, token?: string): Promise<Item
     const cafeDesc = cardapioDoDia.cafeDaManha || cardapioDoDia.cafe_da_manha;
     const almocoDesc = cardapioDoDia.almoco;
     const jantarDesc = cardapioDoDia.jantar;
-    
+
     // Converte a data do cardápio recebido para string YYYY-MM-DD de forma normalizada
     const dateStr = normalizarData(cardapioDoDia.data) || data;
-    
+
     if (cafeDesc) {
         itens.push({
             id: cardapioDoDia.id * 10 + 1,
@@ -470,7 +475,7 @@ export const buscarCardapio = async (data: string, token?: string): Promise<Item
             status: 'servida'
         });
     }
-    
+
     if (almocoDesc) {
         itens.push({
             id: cardapioDoDia.id * 10 + 2,
@@ -481,7 +486,7 @@ export const buscarCardapio = async (data: string, token?: string): Promise<Item
             status: 'servida'
         });
     }
-    
+
     if (jantarDesc) {
         itens.push({
             id: cardapioDoDia.id * 10 + 3,
@@ -505,8 +510,8 @@ export const salvarCardapio = async (
 
     // 💡 CORREÇÃO: Garante que só faz PUT com ID real maior que zero
     const hasValidId = cardapio.id !== undefined && cardapio.id !== null && cardapio.id > 0;
-    const url = hasValidId 
-        ? `${API_BASE_URL}/cardapios/${cardapio.id}` 
+    const url = hasValidId
+        ? `${API_BASE_URL}/cardapios/${cardapio.id}`
         : `${API_BASE_URL}/cardapios`;
     const method = hasValidId ? 'PUT' : 'POST';
 
@@ -593,9 +598,16 @@ export const buscarMedicamentos = async (
     token?: string
 ): Promise<Medicamento[]> => {
     await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Filtra por residente se especificado
     let resultado = residenteId
         ? medicamentosMockCache.filter(m => m.residenteId === residenteId)
         : medicamentosMockCache;
+
+    // TODO: Implementar filtro por data quando backend suportar
+    // Por enquanto, retorna todos os medicamentos do residente
+    // Em produção, a API deve filtrar por data no backend
+
     return resultado;
 };
 
@@ -613,7 +625,7 @@ export const criarMedicamento = async (
         } else {
             residenteNome = med.residenteId === 1 ? 'Maria Silva (Demo)' : med.residenteId === 2 ? 'João Santos (Demo)' : 'Ana Costa (Demo)';
         }
-    } catch {}
+    } catch { }
 
     const novoMed: Medicamento = {
         ...med,
@@ -668,6 +680,7 @@ export interface FiltrosAtividade {
     idosoId?: number;
     tipo?: TipoAtividade;
     status?: StatusAtividade;
+    data?: string; // Filtro por data no formato YYYY-MM-DD
 }
 
 export const buscarAtividades = async (filtros?: FiltrosAtividade, token?: string): Promise<Atividade[]> => {
@@ -695,73 +708,82 @@ export const buscarAtividades = async (filtros?: FiltrosAtividade, token?: strin
             if (filtros.status !== undefined) {
                 filtradas = filtradas.filter(a => a.status === filtros.status);
             }
+            // TODO: Implementar filtro por data quando backend suportar
+            // if (filtros.data !== undefined) {
+            //     filtradas = filtradas.filter(a => a.data === filtros.data);
+            // }
         }
         return filtradas;
     }
-
-    try {
-        const headers: any = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        let url = `${API_BASE_URL}/atividades`;
-        if (filtros?.idosoId !== undefined) {
-            url += `?idosoId=${filtros.idosoId}`;
+    filtradas = filtradas.filter(a => a.status === filtros.status);
+}
         }
-
-        const response = await fetch(url, { method: 'GET', headers });
-        if (!response.ok) throw new Error('Erro ao buscar atividades');
-
-        const dtos: any[] = await response.json();
-
-        let filtradas = dtos.map(dto => {
-            const horarioStr = dto.horario_inicio ? dto.horario_inicio.substring(0, 5) : '08:00';
-            
-            let tipo: TipoAtividade = 'consulta';
-            const nomeLower = (dto.nome || '').toLowerCase();
-            if (nomeLower.includes('medica') || nomeLower.includes('remédio')) tipo = 'medicacao';
-            else if (nomeLower.includes('fisio')) tipo = 'fisioterapia';
-            else if (nomeLower.includes('lazer') || nomeLower.includes('passeio') || nomeLower.includes('jardim')) tipo = 'lazer';
-            else if (nomeLower.includes('almoc') || nomeLower.includes('comida') || nomeLower.includes('refeic')) tipo = 'alimentacao';
-            else if (nomeLower.includes('banho') || nomeLower.includes('higiene')) tipo = 'higiene';
-
-            return {
-                id: dto.id,
-                titulo: dto.nome || 'Atividade',
-                nomeIdoso: filtros?.idosoId ? 'Residente' : 'Geral',
-                idosoId: filtros?.idosoId || 0,
-                horario: horarioStr,
-                tipo: tipo,
-                status: 'concluida' as StatusAtividade,
-                responsavel: dto.responsavelNome || 'Não atribuído'
-            };
-        });
-
-        if (filtros) {
-            if (filtros.tipo !== undefined) {
-                filtradas = filtradas.filter(a => a.tipo === filtros.tipo);
-            }
-            if (filtros.status !== undefined) {
-                filtradas = filtradas.filter(a => a.status === filtros.status);
-            }
-        }
-
-        return filtradas;
-    } catch (error) {
-        console.warn('[API] Erro ao buscar atividades real do backend, usando mock:', error);
-        let filtradas = atividadesMock;
-        if (filtros) {
-            if (filtros.idosoId !== undefined) {
-                filtradas = filtradas.filter(a => a.idosoId === filtros.idosoId);
-            }
-            if (filtros.tipo !== undefined) {
-                filtradas = filtradas.filter(a => a.tipo === filtros.tipo);
-            }
-            if (filtros.status !== undefined) {
-                filtradas = filtradas.filter(a => a.status === filtros.status);
-            }
-        }
-        return filtradas;
+return filtradas;
     }
+
+try {
+    const headers: any = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    let url = `${API_BASE_URL}/atividades`;
+    if (filtros?.idosoId !== undefined) {
+        url += `?idosoId=${filtros.idosoId}`;
+    }
+
+    const response = await fetch(url, { method: 'GET', headers });
+    if (!response.ok) throw new Error('Erro ao buscar atividades');
+
+    const dtos: any[] = await response.json();
+
+    let filtradas = dtos.map(dto => {
+        const horarioStr = dto.horario_inicio ? dto.horario_inicio.substring(0, 5) : '08:00';
+
+        let tipo: TipoAtividade = 'consulta';
+        const nomeLower = (dto.nome || '').toLowerCase();
+        if (nomeLower.includes('medica') || nomeLower.includes('remédio')) tipo = 'medicacao';
+        else if (nomeLower.includes('fisio')) tipo = 'fisioterapia';
+        else if (nomeLower.includes('lazer') || nomeLower.includes('passeio') || nomeLower.includes('jardim')) tipo = 'lazer';
+        else if (nomeLower.includes('almoc') || nomeLower.includes('comida') || nomeLower.includes('refeic')) tipo = 'alimentacao';
+        else if (nomeLower.includes('banho') || nomeLower.includes('higiene')) tipo = 'higiene';
+
+        return {
+            id: dto.id,
+            titulo: dto.nome || 'Atividade',
+            nomeIdoso: filtros?.idosoId ? 'Residente' : 'Geral',
+            idosoId: filtros?.idosoId || 0,
+            horario: horarioStr,
+            tipo: tipo,
+            status: 'concluida' as StatusAtividade,
+            responsavel: dto.responsavelNome || 'Não atribuído'
+        };
+    });
+
+    if (filtros) {
+        if (filtros.tipo !== undefined) {
+            filtradas = filtradas.filter(a => a.tipo === filtros.tipo);
+        }
+        if (filtros.status !== undefined) {
+            filtradas = filtradas.filter(a => a.status === filtros.status);
+        }
+    }
+
+    return filtradas;
+} catch (error) {
+    console.warn('[API] Erro ao buscar atividades real do backend, usando mock:', error);
+    let filtradas = atividadesMock;
+    if (filtros) {
+        if (filtros.idosoId !== undefined) {
+            filtradas = filtradas.filter(a => a.idosoId === filtros.idosoId);
+        }
+        if (filtros.tipo !== undefined) {
+            filtradas = filtradas.filter(a => a.tipo === filtros.tipo);
+        }
+        if (filtros.status !== undefined) {
+            filtradas = filtradas.filter(a => a.status === filtros.status);
+        }
+    }
+    return filtradas;
+}
 };
 
 export const criarAtividade = async (
