@@ -13,7 +13,7 @@ import {
     Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { buscarIdosos, Idoso } from '../services/api';
+import { buscarIdosos, buscarResumo, Idoso } from '../services/api';
 import { PerfilIdosoPage } from './perfil_idoso_page';
 import { BottomTabBar } from '../components/BottomTabBar';
 
@@ -55,6 +55,8 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, userRole,
     const [filterRoom, setFilterRoom] = useState<string>('todos');
     const [availableRooms, setAvailableRooms] = useState<string[]>([]);
     const [modalFiltros, setModalFiltros] = useState(false);
+    const [isAscending, setIsAscending] = useState(true);
+    const [totalCadastrados, setTotalCadastrados] = useState<number>(0);
 
     const temFiltros = filterStatus !== 'todos' || filterRoom !== 'todos';
 
@@ -83,7 +85,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, userRole,
     // Filtrar quando a busca com debounce, status ou quarto muda
     useEffect(() => {
         filtrarIdosos();
-    }, [debouncedSearch, filterStatus, filterRoom, idosos]);
+    }, [debouncedSearch, filterStatus, filterRoom, idosos, isAscending]);
 
     // Carregar primeira página
     useEffect(() => {
@@ -95,9 +97,13 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, userRole,
             setError(null);
             setLoading(true);
             setCurrentPage(0);
-            const idososData = await buscarIdosos(token, 0, pageSize);
+            const [idososData, resumoData] = await Promise.all([
+                buscarIdosos(token, 0, pageSize),
+                buscarResumo(token)
+            ]);
             setIdosos(idososData);
             setTodosIdosos(idososData);
+            setTotalCadastrados(resumoData?.total || idososData.length);
             setHasMore(idososData.length === pageSize);
             // Extrair quartos únicos e ordenar
             const quartos = Array.from(new Set(idososData.map(i => i.quarto).filter(Boolean))).sort() as string[];
@@ -152,6 +158,12 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, userRole,
                 idoso.nome.toLowerCase().includes(debouncedSearch.toLowerCase())
             );
         }
+
+        // Ordenar alfabeticamente (A-Z ou Z-A)
+        resultado = [...resultado].sort((a, b) => {
+            const comparison = (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
+            return isAscending ? comparison : -comparison;
+        });
 
         setFilteredIdosos(resultado);
     };
@@ -403,10 +415,24 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, userRole,
                 }
                 ListHeaderComponent={
                     filteredIdosos.length > 0 ? (
-                        <View style={styles.resultInfo}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12 }}>
                             <Text style={styles.resultText}>
-                                {filteredIdosos.length} {filteredIdosos.length === 1 ? 'idoso' : 'idosos'} encontrado{filteredIdosos.length === 1 ? '' : 's'}
+                                {totalCadastrados} {totalCadastrados === 1 ? 'idoso cadastrado' : 'idosos cadastrados'}
                             </Text>
+                            <TouchableOpacity 
+                                onPress={() => setIsAscending(!isAscending)} 
+                                activeOpacity={0.7}
+                                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: 4 }}
+                            >
+                                <Ionicons 
+                                    name={isAscending ? "caret-up" : "caret-down"} 
+                                    size={16} 
+                                    color="#202c4b" 
+                                />
+                                <Text style={{ fontSize: 13, fontWeight: '600', color: '#202c4b' }}>
+                                    {isAscending ? 'A-Z' : 'Z-A'}
+                                </Text>
+                            </TouchableOpacity>
                         </View>
                     ) : null
                 }

@@ -24,6 +24,8 @@ import {
     StatusMedicamento,
     TipoAtividade,
     StatusAtividade,
+    buscarUsuarios,
+    UsuarioResponse,
 } from '../services/api';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -35,6 +37,20 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, userRo
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [imagemLocal, setImagemLocal] = useState<string | null>(null);
+
+    const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([]);
+
+    useEffect(() => {
+        const carregarUsuarios = async () => {
+            try {
+                const data = await buscarUsuarios(token);
+                setUsuarios(data || []);
+            } catch (err) {
+                console.warn('[PerfilIdoso] Erro ao buscar usuários:', err);
+            }
+        };
+        carregarUsuarios();
+    }, [token]);
 
     // Estados integrados
     const [secaoAtiva, setSecaoAtiva] = useState<SecaoAtiva>(initialSection);
@@ -52,6 +68,7 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, userRo
     const [editDataNascimento, setEditDataNascimento] = useState('');
     const [editResponsavelNome, setEditResponsavelNome] = useState('');
     const [editResponsavelId, setEditResponsavelId] = useState('');
+    const [dropdownVisible, setDropdownVisible] = useState(false);
 
     // 2. Medicamento
     const [modalMedVisible, setModalMedVisible] = useState(false);
@@ -133,6 +150,7 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, userRo
                 sexo: idoso?.sexo || 'M',
                 estadoSaude: editEstadoSaude,
                 observacoes: editObservacoes,
+                quarto: editQuarto,
                 responsavelId: parseInt(editResponsavelId) || idoso?.responsavelId || 1,
                 responsavelNome: editResponsavelNome
             };
@@ -339,7 +357,20 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, userRo
         try {
             setLoadingSecoes(true);
             const acts = await buscarAtividades({ idosoId }, token);
-            setAtividades(acts);
+            
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+            
+            const hojeActs = acts.filter(a => {
+                if (!a.data) return false;
+                const aDataStr = a.data.split('T')[0];
+                return aDataStr === todayStr;
+            });
+            
+            setAtividades(hojeActs);
         } catch (err) {
             Alert.alert('Erro', 'Não foi possível carregar as atividades.');
         } finally {
@@ -451,6 +482,8 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, userRo
         pendente: { label: 'Pendente', cor: '#D97706', bg: '#FEF3C7', dot: '#F59E0B' },
         concluida: { label: 'Concluída', cor: '#059669', bg: '#ECFDF5', dot: '#10B981' },
         cancelada: { label: 'Cancelada', cor: '#6B7280', bg: '#F3F4F6', dot: '#9CA3AF' },
+        em_andamento: { label: 'Em Andamento', cor: '#1D4ED8', bg: '#DBEAFE', dot: '#1D4ED8' },
+        atrasada: { label: 'Atrasada', cor: '#DC2626', bg: '#FEE2E2', dot: '#DC2626' },
     };
 
     return (
@@ -495,12 +528,6 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, userRo
 
                     {/* Grid de Informações Rápidas */}
                     <View style={styles.infoGrid}>
-                        <View style={styles.gridItem}>
-                            <Ionicons name="water" size={18} color="#202c4b" />
-                            <Text style={styles.gridLabel}>Tipo Sanguíneo</Text>
-                            <Text style={styles.gridValue}>N/A</Text>
-                        </View>
-                        <View style={styles.gridDivider} />
                         <View style={styles.gridItem}>
                             <Ionicons name="calendar" size={18} color="#202c4b" />
                             <Text style={styles.gridLabel}>Nascimento</Text>
@@ -667,12 +694,6 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, userRo
                     <View style={styles.sectionCard}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
                             <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Atividades de Hoje</Text>
-                            {isAllowedToEdit && (
-                                <TouchableOpacity style={styles.addButtonInline} onPress={openAddAtividade}>
-                                    <Ionicons name="add" size={16} color="#202c4b" />
-                                    <Text style={styles.addButtonInlineText}>Agendar</Text>
-                                </TouchableOpacity>
-                            )}
                         </View>
                         {loadingSecoes ? (
                             <ActivityIndicator size="small" color="#202c4b" style={{ marginVertical: 20 }} />
@@ -699,18 +720,6 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, userRo
                                                 <Text style={[styles.actStatusText, { color: status.cor }]}>{status.label}</Text>
                                             </View>
                                         </View>
-                                        {isAllowedToEdit && (
-                                            <View style={[styles.actionRowInline, { borderTopWidth: 1, borderColor: '#F3F4F6', paddingTop: 8, marginTop: 8 }]}>
-                                                <TouchableOpacity style={styles.actionBtnInline} onPress={() => openEditAtividade(act)}>
-                                                    <Ionicons name="create-outline" size={15} color="#6366F1" />
-                                                    <Text style={[styles.actionBtnInlineText, { color: '#6366F1' }]}>Editar</Text>
-                                                </TouchableOpacity>
-                                                <TouchableOpacity style={styles.actionBtnInline} onPress={() => handleDeleteAtividade(act.id)}>
-                                                    <Ionicons name="trash-outline" size={15} color="#EF4444" />
-                                                    <Text style={[styles.actionBtnInlineText, { color: '#EF4444' }]}>Remover</Text>
-                                                </TouchableOpacity>
-                                            </View>
-                                        )}
                                     </View>
                                 );
                             })
@@ -770,22 +779,53 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, userRo
                             multiline 
                         />
 
-                        <Text style={styles.filterLabel}>Responsável (Nome de exibição)</Text>
-                        <TextInput 
-                            style={styles.modalInput} 
-                            value={editResponsavelNome} 
-                            onChangeText={setEditResponsavelNome} 
-                            placeholder="Ex: Carlos Silva" 
-                        />
+                        <Text style={styles.filterLabel}>Funcionário Responsável <Text style={{ color: '#EF4444' }}>*</Text></Text>
+                        <TouchableOpacity 
+                            style={styles.dropdownBox} 
+                            onPress={() => setDropdownVisible(!dropdownVisible)}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.dropdownBoxText}>
+                                {editResponsavelNome || 'Selecione o funcionário responsável'}
+                            </Text>
+                            <Ionicons name={dropdownVisible ? "chevron-up" : "chevron-down"} size={20} color="#6B7280" />
+                        </TouchableOpacity>
 
-                        <Text style={styles.filterLabel}>Responsável (ID do Familiar no Banco)</Text>
-                        <TextInput 
-                            style={styles.modalInput} 
-                            value={editResponsavelId} 
-                            onChangeText={setEditResponsavelId} 
-                            placeholder="Ex: 3 (Renato Pereira)" 
-                            keyboardType="numeric"
-                        />
+                        {dropdownVisible && (
+                            <View style={styles.dropdownListContainer}>
+                                <ScrollView nestedScrollEnabled style={{ maxHeight: 180 }} keyboardShouldPersistTaps="handled">
+                                    {usuarios
+                                        .filter(u => (u.role || '').toLowerCase() === 'funcionario')
+                                        .map(u => {
+                                            const selecionado = String(editResponsavelId) === String(u.id);
+                                            return (
+                                                <TouchableOpacity
+                                                    key={String(u.id)}
+                                                    style={[
+                                                        styles.dropdownItem,
+                                                        selecionado && styles.dropdownItemActive
+                                                    ]}
+                                                    onPress={() => {
+                                                        setEditResponsavelId(String(u.id));
+                                                        setEditResponsavelNome(u.name || u.nome || '');
+                                                        setDropdownVisible(false);
+                                                    }}
+                                                >
+                                                    <Text style={[
+                                                        styles.dropdownItemText, 
+                                                        selecionado && styles.dropdownItemTextActive
+                                                    ]}>
+                                                        {u.name || u.nome || 'Sem nome'}
+                                                    </Text>
+                                                    {selecionado && (
+                                                        <Ionicons name="checkmark" size={18} color="#202c4b" />
+                                                    )}
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                </ScrollView>
+                            </View>
+                        )}
 
                         <TouchableOpacity style={styles.modalSaveBtn} onPress={handleSaveFicha}>
                             <Text style={styles.modalSaveText}>Salvar Alterações</Text>
@@ -979,4 +1019,15 @@ const styles = StyleSheet.create({
     actionRowInline: { flexDirection: 'row', justifyContent: 'flex-end', gap: 14 },
     actionBtnInline: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4 },
     actionBtnInlineText: { fontSize: 12, fontWeight: '600' },
+    filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB', marginRight: 8, marginBottom: 8 },
+    filterChipActive: { backgroundColor: '#202c4b', borderColor: '#202c4b' },
+    filterChipText: { fontSize: 13, fontWeight: '500', color: '#6B7280' },
+    filterChipTextActive: { color: '#FFFFFF' },
+    dropdownBox: { height: 48, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#F9FAFB', paddingHorizontal: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+    dropdownBoxText: { fontSize: 14, color: '#1F2937' },
+    dropdownListContainer: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, backgroundColor: '#FFFFFF', marginBottom: 14, overflow: 'hidden', elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+    dropdownItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+    dropdownItemActive: { backgroundColor: '#EEF2FF' },
+    dropdownItemText: { fontSize: 14, color: '#4B5563' },
+    dropdownItemTextActive: { color: '#202c4b', fontWeight: '600' },
 });

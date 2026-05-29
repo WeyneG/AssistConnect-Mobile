@@ -31,6 +31,8 @@ const STATUS_CONFIG: Record<StatusAtividade, { label: string; cor: string; bg: s
     pendente: { label: 'Pendente', cor: '#D97706', bg: '#FEF3C7', dot: '#F59E0B' },
     concluida: { label: 'Concluída', cor: '#059669', bg: '#ECFDF5', dot: '#10B981' },
     cancelada: { label: 'Cancelada', cor: '#6B7280', bg: '#F3F4F6', dot: '#9CA3AF' },
+    em_andamento: { label: 'Em Andamento', cor: '#1D4ED8', bg: '#DBEAFE', dot: '#1D4ED8' },
+    atrasada: { label: 'Atrasada', cor: '#DC2626', bg: '#FEE2E2', dot: '#DC2626' },
 };
 
 // ─── Componente de chip de filtro ativo ──────────────────────────────────────

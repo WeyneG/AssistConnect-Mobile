@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     View,
     Text,
@@ -7,14 +7,14 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Alert,
+    Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
     buscarIdosos,
     Idoso,
     buscarAtividades,
-    buscarMedicamentos,
-    buscarTodosCardapios
+    buscarMedicamentos
 } from '../services/api';
 
 interface ReportsDashboardProps {
@@ -23,7 +23,7 @@ interface ReportsDashboardProps {
     activeTab?: string;
 }
 
-type ReportType = 'saude' | 'atividades' | 'alimentacao' | 'medicamentos';
+type ReportType = 'saude' | 'atividades' | 'medicamentos';
 
 interface Report {
     type: ReportType;
@@ -50,86 +50,7 @@ interface TableRecord {
     value?: number;
 }
 
-// ─── Dados Simulados ───────────────────────────────────────────────────────
-const generateSimulatedData = (reportType: ReportType): ReportData => {
-    const dataMap: Record<ReportType, ReportData> = {
-        saude: {
-            labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'],
-            values: [65, 78, 82, 75, 88, 72, 85],
-            summary: {
-                total: 565,
-                average: 80.7,
-                highest: 'Sexta-feira',
-                lowest: 'Sábado',
-            },
-        },
-        atividades: {
-            labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'],
-            values: [45, 52, 48, 61, 55, 38, 42],
-            summary: {
-                total: 341,
-                average: 48.7,
-                highest: 'Quinta-feira',
-                lowest: 'Sábado',
-            },
-        },
-        alimentacao: {
-            labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Fish', 'Sab', 'Dom'],
-            values: [72, 75, 78, 80, 82, 76, 79],
-            summary: {
-                total: 542,
-                average: 77.4,
-                highest: 'Sexta-feira',
-                lowest: 'Segunda-feira',
-            },
-        },
-        medicamentos: {
-            labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'],
-            values: [95, 92, 96, 94, 97, 93, 95],
-            summary: {
-                total: 662,
-                average: 94.6,
-                highest: 'Sexta-feira',
-                lowest: 'Terça-feira',
-            },
-        },
-    };
-    return dataMap[reportType];
-};
 
-const generateTableData = (reportType: ReportType): TableRecord[] => {
-    const dataMap: Record<ReportType, TableRecord[]> = {
-        saude: [
-            { id: 1, date: '2024-04-22', description: 'Pressão Arterial Aferida', status: 'concluida', value: 120 },
-            { id: 2, date: '2024-04-21', description: 'Consulta Geral', status: 'concluida' },
-            { id: 3, date: '2024-04-20', description: 'Exame Laboratorial', status: 'pendente' },
-            { id: 4, date: '2024-04-19', description: 'Avaliação Clínica', status: 'concluida' },
-            { id: 5, date: '2024-04-18', description: 'Monitoramento', status: 'cancelada' },
-        ],
-        atividades: [
-            { id: 1, date: '2024-04-22', description: 'Fisioterapia', status: 'concluida' },
-            { id: 2, date: '2024-04-21', description: 'Atividade Recreativa', status: 'concluida' },
-            { id: 3, date: '2024-04-20', description: 'Exercício Leve', status: 'pendente' },
-            { id: 4, date: '2024-04-19', description: 'Caminhada Orientada', status: 'concluida' },
-            { id: 5, date: '2024-04-18', description: 'Yoga Adaptado', status: 'concluida' },
-        ],
-        alimentacao: [
-            { id: 1, date: '2024-04-22', description: 'Café da Manhã', status: 'concluida' },
-            { id: 2, date: '2024-04-22', description: 'Almoço', status: 'concluida' },
-            { id: 3, date: '2024-04-22', description: 'Café da Tarde', status: 'concluida' },
-            { id: 4, date: '2024-04-21', description: 'Café da Manhã', status: 'pendente' },
-            { id: 5, date: '2024-04-21', description: 'Almoço', status: 'concluida' },
-        ],
-        medicamentos: [
-            { id: 1, date: '2024-04-22', description: 'Medicamento A - Manhã', status: 'concluida' },
-            { id: 2, date: '2024-04-22', description: 'Medicamento B - Tarde', status: 'concluida' },
-            { id: 3, date: '2024-04-22', description: 'Medicamento C - Noite', status: 'pendente' },
-            { id: 4, date: '2024-04-21', description: 'Medicamento A - Manhã', status: 'concluida' },
-            { id: 5, date: '2024-04-21', description: 'Medicamento B - Tarde', status: 'concluida' },
-        ],
-    };
-    return dataMap[reportType];
-};
 
 // ─── Componente de Skeleton Loading ───────────────────────────────────────
 const SkeletonLoader: React.FC = () => (
@@ -422,7 +343,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     simpleBarLabel: {
-        width: 40,
+        width: 95,
         fontSize: 13,
         fontWeight: '600',
         color: '#6B7280',
@@ -458,6 +379,97 @@ const styles = StyleSheet.create({
         color: '#6B7280',
         fontWeight: '500',
     },
+    filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB', marginRight: 8, marginBottom: 8 },
+    filterChipActive: { backgroundColor: '#202c4b', borderColor: '#202c4b' },
+    filterChipText: { fontSize: 13, fontWeight: '500', color: '#6B7280' },
+    filterChipTextActive: { color: '#FFFFFF' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+    modalSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
+    modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB', alignSelf: 'center', marginBottom: 16 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    modalTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937' },
+    modalClear: { fontSize: 14, fontWeight: '600', color: '#EF4444' },
+    calendarContainer: {
+        marginTop: 16,
+        backgroundColor: '#F8FAFC',
+        borderRadius: 16,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#F1F5F9'
+    },
+    calendarWeekdaysRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        paddingBottom: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E2E8F0'
+    },
+    calendarWeekdayText: {
+        width: '14%',
+        textAlign: 'center',
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#94A3B8'
+    },
+    calendarDaysGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 8
+    },
+    calendarDayCell: {
+        width: '14%',
+        aspectRatio: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: 2,
+        borderRadius: 20
+    },
+    calendarDayCellEmpty: {
+        width: '14%',
+        aspectRatio: 1
+    },
+    calendarDayCellSelected: {
+        backgroundColor: '#202c4b'
+    },
+    calendarDayCellToday: {
+        borderWidth: 1,
+        borderColor: '#202c4b'
+    },
+    calendarDayText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#334155'
+    },
+    calendarDayTextSelected: {
+        color: '#FFFFFF',
+        fontWeight: '700'
+    },
+    calendarDayTextToday: {
+        color: '#202c4b',
+        fontWeight: '700'
+    },
+    presetsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 12,
+        gap: 6
+    },
+    presetBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F1F5F9',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        borderRadius: 10,
+        paddingVertical: 8
+    },
+    presetBtnText: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: '#202c4b'
+    },
 });
 
 const TODOS_OS_RESIDENTES: Idoso = {
@@ -477,8 +489,88 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
     const [idosos, setIdosos] = useState<Idoso[]>([]);
     const [loading, setLoading] = useState(true);
     const [showResidentDropdown, setShowResidentDropdown] = useState(false);
-    const [dateFrom, setDateFrom] = useState('24/05/2026');
-    const [dateTo, setDateTo] = useState('28/05/2026');
+    const [dateFrom, setDateFrom] = useState(() => {
+        const today = new Date();
+        const day = String(today.getDate()).padStart(2, '0');
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const year = today.getFullYear();
+        return `${day}/${month}/${year}`;
+    });
+    const [dateTo, setDateTo] = useState(() => {
+        const today = new Date();
+        const day = String(today.getDate()).padStart(2, '0');
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const year = today.getFullYear();
+        return `${day}/${month}/${year}`;
+    });
+
+    const sortedIdosos = useMemo(() => {
+        return [...idosos].sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
+    }, [idosos]);
+
+    // --- Estados e Auxiliares do Calendário Customizado ---
+    const [modalCalendarVisible, setModalCalendarVisible] = useState(false);
+    const [calendarTarget, setCalendarTarget] = useState<'from' | 'to'>('from');
+    const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
+    const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+
+    const parseDDMMYYYY = (str: string) => {
+        const parts = str.split('/');
+        if (parts.length === 3) {
+            return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        }
+        return new Date();
+    };
+
+    const formatDDMMYYYY = (date: Date) => {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    };
+
+    const openCalendar = (target: 'from' | 'to') => {
+        setCalendarTarget(target);
+        const currentDate = parseDDMMYYYY(target === 'from' ? dateFrom : dateTo);
+        setCalendarMonth(currentDate.getMonth());
+        setCalendarYear(currentDate.getFullYear());
+        setModalCalendarVisible(true);
+    };
+
+    const getDaysInMonth = (month: number, year: number) => {
+        return new Date(year, month + 1, 0).getDate();
+    };
+
+    const getFirstDayOfMonth = (month: number, year: number) => {
+        return new Date(year, month, 1).getDay();
+    };
+
+    const handleQuickPreset = (preset: 'hoje' | '7dias' | 'mes_atual' | 'mes_anterior') => {
+        const targetEnd = new Date();
+        let targetStart = new Date();
+        if (preset === 'hoje') {
+            targetStart = new Date();
+        } else if (preset === '7dias') {
+            targetStart.setDate(targetEnd.getDate() - 6);
+        } else if (preset === 'mes_atual') {
+            targetStart = new Date(targetEnd.getFullYear(), targetEnd.getMonth(), 1);
+        } else if (preset === 'mes_anterior') {
+            targetStart = new Date(targetEnd.getFullYear(), targetEnd.getMonth() - 1, 1);
+            targetEnd.setTime(new Date(targetEnd.getFullYear(), targetEnd.getMonth(), 0).getTime());
+        }
+        
+        setDateFrom(formatDDMMYYYY(targetStart));
+        setDateTo(formatDDMMYYYY(targetEnd));
+        setModalCalendarVisible(false);
+    };
+
+    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const mesesList = [
+        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    const currentYearVal = new Date().getFullYear();
+    const yearsRange = Array.from({ length: 15 }, (_, i) => currentYearVal - 6 + i);
 
     // Estados Dinâmicos do Relatório
     const [reportData, setReportData] = useState<ReportData | null>(null);
@@ -488,13 +580,12 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
     const reports: Report[] = [
         { type: 'saude', label: 'Estabilidade', icon: 'heart' },
         { type: 'atividades', label: 'Atividades', icon: 'fitness' },
-        { type: 'alimentacao', label: 'Nutrição', icon: 'restaurant' },
         { type: 'medicamentos', label: 'Medicamentos', icon: 'medical' },
     ];
 
     useEffect(() => {
         carregarIdosos();
-    }, []);
+    }, [token]);
 
     const carregarIdosos = async () => {
         try {
@@ -525,25 +616,30 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
         try {
             const isTodos = resident.id === -1;
 
+            const start = parseDDMMYYYY(dateFrom);
+            start.setHours(0, 0, 0, 0);
+            const end = parseDDMMYYYY(dateTo);
+            end.setHours(23, 59, 59, 999);
+
             if (type === 'atividades') {
                 const acts = await buscarAtividades(isTodos ? undefined : { idosoId: resident.id }, token);
+                
+                // Filtrar atividades pelo período selecionado
+                const filteredActs = acts.filter(act => {
+                    if (!act.data) return false;
+                    const actDateStr = act.data.split('T')[0];
+                    const actDate = new Date(actDateStr + 'T12:00:00');
+                    return actDate >= start && actDate <= end;
+                });
+
                 const dayCounts = [0, 0, 0, 0, 0, 0, 0];
-                acts.forEach(act => {
+                filteredActs.forEach(act => {
                     const w = getWeekday(act.data);
                     const index = w === 0 ? 6 : w - 1; // Mapeia Dom(0)->6, Seg(1)->0, etc.
                     dayCounts[index]++;
                 });
 
-                let values = [...dayCounts];
-                const totalActs = acts.length;
-                if (totalActs === 0) {
-                    if (isTodos) {
-                        values = [12, 15, 14, 18, 16, 8, 10];
-                    } else {
-                        const seed = resident.id % 5;
-                        values = [3 + seed, 4 + seed, 3 + seed, 5 + seed, 4 + seed, 2 + seed, 3 + seed];
-                    }
-                }
+                const values = [...dayCounts];
 
                 const total = values.reduce((sum, v) => sum + v, 0);
                 const average = total / 7;
@@ -559,33 +655,21 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                     summary: {
                         total,
                         average,
-                        highest: weekdayLabelsLong[highestIdx],
-                        lowest: weekdayLabelsLong[lowestIdx]
+                        highest: total > 0 ? weekdayLabelsLong[highestIdx] : 'Nenhum',
+                        lowest: total > 0 ? weekdayLabelsLong[lowestIdx] : 'Nenhum'
                     }
                 };
 
                 let dynamicTableData: TableRecord[] = [];
-                if (acts.length > 0) {
-                    dynamicTableData = acts.slice(0, 5).map(act => ({
+                if (filteredActs.length > 0) {
+                    dynamicTableData = filteredActs.slice(0, 5).map(act => ({
                         id: act.id,
-                        date: act.data || '2026-05-28',
+                        date: act.data ? act.data.split('T')[0] : '2026-05-28',
                         description: isTodos ? `${act.titulo} [${act.nomeIdoso === 'Geral' ? 'Todos' : act.nomeIdoso}]` : act.titulo,
                         status: act.status === 'concluida' ? 'concluida' : act.status === 'cancelada' ? 'cancelada' : 'pendente'
                     }));
                 } else {
-                    dynamicTableData = isTodos ? [
-                        { id: 1, date: '2026-05-27', description: 'Fisioterapia de rotina [Maria Silva]', status: 'concluida' },
-                        { id: 2, date: '2026-05-26', description: 'Caminhada assistida no jardim [João Santos]', status: 'concluida' },
-                        { id: 3, date: '2026-05-25', description: 'Atividade de estimulação cognitiva [Ana Costa]', status: 'concluida' },
-                        { id: 4, date: '2026-05-24', description: 'Oficina de artes integrada [Geral]', status: 'cancelada' },
-                        { id: 5, date: '2026-05-23', description: 'Leitura e conversação em grupo [Maria Silva]', status: 'concluida' }
-                    ] : [
-                        { id: 1, date: '2026-05-27', description: `Fisioterapia de rotina - ${resident.nome}`, status: 'concluida' },
-                        { id: 2, date: '2026-05-26', description: 'Caminhada assistida no jardim', status: 'concluida' },
-                        { id: 3, date: '2026-05-25', description: 'Atividade de estimulação cognitiva', status: 'concluida' },
-                        { id: 4, date: '2026-05-24', description: 'Oficina de artes integrada', status: 'cancelada' },
-                        { id: 5, date: '2026-05-23', description: 'Leitura e conversação em grupo', status: 'concluida' }
-                    ];
+                    dynamicTableData = [];
                 }
 
                 setReportData(dynamicReportData);
@@ -596,44 +680,34 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                 const meds = await buscarMedicamentos(dateStr, isTodos ? null : resident.id, token);
                 const totalMeds = meds.length;
 
-                let values = [0, 0, 0, 0, 0, 0, 0];
-                if (totalMeds > 0) {
-                    if (isTodos) {
-                        const administeredCount = meds.filter(m => m.status === 'administrado').length;
-                        const compliancePct = Math.round((administeredCount / totalMeds) * 100);
-                        values = [
-                            compliancePct - 2,
-                            compliancePct + 1,
-                            compliancePct,
-                            compliancePct + 2,
-                            compliancePct - 1,
-                            compliancePct + 1,
-                            compliancePct
-                        ].map(v => Math.min(100, Math.max(0, v)));
-                    } else {
-                        const seed = resident.id % 4;
-                        values = [95 + seed, 92 - seed, 96 + seed, 94 + seed, 97 - seed, 93 + seed, 95 - seed];
-                    }
-                } else {
-                    values = isTodos ? [95, 94, 96, 95, 97, 93, 95] : [0, 0, 0, 0, 0, 0, 0];
-                }
+                const administradoCount = meds.filter(m => m.status === 'administrado').length;
+                const pendenteCount = meds.filter(m => m.status === 'pendente').length;
+                const atrasadoCount = meds.filter(m => m.status === 'atrasado').length;
 
-                const total = values.reduce((sum, v) => sum + v, 0);
-                const average = total / 7;
-                const maxVal = Math.max(...values);
-                const minVal = Math.min(...values);
-                const highestIdx = values.indexOf(maxVal);
-                const lowestIdx = values.indexOf(minVal);
-                const weekdayLabelsLong = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
+                const average = totalMeds > 0 ? (administradoCount / totalMeds) * 100 : 0;
+
+                const counts = [
+                    { label: 'Administrado', count: administradoCount },
+                    { label: 'Pendente', count: pendenteCount },
+                    { label: 'Atrasado', count: atrasadoCount }
+                ];
+                counts.sort((a, b) => b.count - a.count);
+
+                const highest = totalMeds > 0 
+                    ? `${counts[0].label} (${counts[0].count} remédio${counts[0].count === 1 ? '' : 's'})` 
+                    : 'Nenhum';
+                const lowest = totalMeds > 0 
+                    ? `${counts[2].label} (${counts[2].count} remédio${counts[2].count === 1 ? '' : 's'})` 
+                    : 'Nenhum';
 
                 const dynamicReportData: ReportData = {
-                    labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'],
-                    values,
+                    labels: ['Administrado', 'Pendente', 'Atrasado'],
+                    values: [administradoCount, pendenteCount, atrasadoCount],
                     summary: {
-                        total,
+                        total: totalMeds,
                         average,
-                        highest: (totalMeds > 0 || isTodos) ? `${weekdayLabelsLong[highestIdx]} (${maxVal}%)` : 'N/A',
-                        lowest: (totalMeds > 0 || isTodos) ? `${weekdayLabelsLong[lowestIdx]} (${minVal}%)` : 'N/A'
+                        highest,
+                        lowest
                     }
                 };
 
@@ -646,63 +720,30 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                         status: med.status === 'administrado' ? 'concluida' : med.status === 'atrasado' ? 'cancelada' : 'pendente'
                     }));
                 } else {
-                    dynamicTableData = [
-                        { id: 1, date: '2026-05-28', description: 'Nenhum medicamento de uso diário cadastrado', status: 'pendente' }
-                    ];
+                    dynamicTableData = [];
                 }
 
                 setReportData(dynamicReportData);
                 setTableData(dynamicTableData);
 
-            } else if (type === 'alimentacao') {
-                const menus = await buscarTodosCardapios(token);
-                const totalMenus = menus.length;
 
-                const basePct = isTodos ? 80 : (75 + (resident.id % 5));
-                const seed = isTodos ? 2 : (resident.id % 5);
-                const values = [basePct - seed, basePct + 2, basePct, basePct + seed, basePct + 1, basePct - 3, basePct + seed].map(v => Math.min(100, Math.max(0, v)));
-                const total = values.reduce((sum, v) => sum + v, 0);
-                const average = total / 7;
-                const maxVal = Math.max(...values);
-                const minVal = Math.min(...values);
-                const highestIdx = values.indexOf(maxVal);
-                const lowestIdx = values.indexOf(minVal);
-                const weekdayLabelsLong = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
-
-                const dynamicReportData: ReportData = {
-                    labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'],
-                    values,
-                    summary: {
-                        total,
-                        average,
-                        highest: `${weekdayLabelsLong[highestIdx]} (${maxVal}%)`,
-                        lowest: `${weekdayLabelsLong[lowestIdx]} (${minVal}%)`
-                    }
-                };
-
-                let dynamicTableData: TableRecord[] = [];
-                if (totalMenus > 0) {
-                    dynamicTableData = menus.slice().sort((a,b) => new Date(b.data).getTime() - new Date(a.data).getTime()).slice(0, 5).map(menu => ({
-                        id: menu.id,
-                        date: menu.data,
-                        description: `Almoço: ${menu.almoco ? menu.almoco.substring(0, 30) + '...' : 'Sem almoço cadastrado'}`,
-                        status: 'concluida'
-                    }));
-                } else {
-                    dynamicTableData = [
-                        { id: 1, date: '2026-05-28', description: 'Refeições normais acompanhadas pela equipe', status: 'concluida' },
-                        { id: 2, date: '2026-05-27', description: 'Café da manhã completo de rotina', status: 'concluida' },
-                        { id: 3, date: '2026-05-27', description: 'Almoço balanceado supervisionado', status: 'concluida' }
-                    ];
-                }
-
-                setReportData(dynamicReportData);
-                setTableData(dynamicTableData);
 
             } else {
-                // Saúde
+                // Saúde / Estabilidade
                 let dynamicReportData: ReportData;
                 let dynamicTableData: TableRecord[] = [];
+
+                const getFormattedDateWithOffset = (baseDate: Date, offsetDays: number) => {
+                    const d = new Date(baseDate.getTime());
+                    d.setDate(d.getDate() - offsetDays);
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+
+                const diffTime = Math.abs(end.getTime() - start.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
 
                 if (isTodos) {
                     const totalIdosos = idosos.length || 1;
@@ -710,34 +751,25 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                     const obsCount = idosos.filter(i => i.estadoSaude === 'OBSERVACAO').length;
                     const ativoCount = idosos.filter(i => i.estadoSaude !== 'GRAVE' && i.estadoSaude !== 'OBSERVACAO').length;
 
-                    const averageHealthIndex = Math.round(((ativoCount * 95) + (obsCount * 75) + (graveCount * 50)) / totalIdosos);
+                    const average = (ativoCount / totalIdosos) * 100;
 
-                    const values = [
-                        averageHealthIndex - 1,
-                        averageHealthIndex + 1,
-                        averageHealthIndex,
-                        averageHealthIndex + 2,
-                        averageHealthIndex - 2,
-                        averageHealthIndex + 1,
-                        averageHealthIndex
-                    ].map(v => Math.min(100, Math.max(0, v)));
-
-                    const total = values.reduce((sum, v) => sum + v, 0);
-                    const average = total / 7;
-                    const maxVal = Math.max(...values);
-                    const minVal = Math.min(...values);
-                    const highestIdx = values.indexOf(maxVal);
-                    const lowestIdx = values.indexOf(minVal);
-                    const weekdayLabelsLong = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
+                    const counts = [
+                        { label: 'Estável', count: ativoCount },
+                        { label: 'Em Observação', count: obsCount },
+                        { label: 'Grave', count: graveCount }
+                    ];
+                    counts.sort((a, b) => b.count - a.count);
+                    const highest = `${counts[0].label} (${counts[0].count} idoso${counts[0].count === 1 ? '' : 's'})`;
+                    const lowest = `${counts[2].label} (${counts[2].count} idoso${counts[2].count === 1 ? '' : 's'})`;
 
                     dynamicReportData = {
-                        labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'],
-                        values,
+                        labels: ['Estável', 'Em Observação', 'Grave'],
+                        values: [ativoCount, obsCount, graveCount],
                         summary: {
-                            total,
+                            total: totalIdosos,
                             average,
-                            highest: `${weekdayLabelsLong[highestIdx]} (${maxVal}%)`,
-                            lowest: `${weekdayLabelsLong[lowestIdx]} (${minVal}%)`
+                            highest,
+                            lowest
                         }
                     };
 
@@ -747,27 +779,30 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                     const ativoIdosos = idosos.filter(i => i.estadoSaude !== 'GRAVE' && i.estadoSaude !== 'OBSERVACAO');
 
                     graveIdosos.forEach(i => {
+                        const offset = (nextRecordId - 1) % diffDays;
                         dynamicTableData.push({
                             id: nextRecordId++,
-                            date: '2026-05-27',
+                            date: getFormattedDateWithOffset(end, offset),
                             description: `${i.nome} - Monitoramento sob alerta clínico máximo (Grave)`,
                             status: 'cancelada'
                         });
                     });
 
                     obsIdosos.forEach(i => {
+                        const offset = (nextRecordId - 1) % diffDays;
                         dynamicTableData.push({
                             id: nextRecordId++,
-                            date: '2026-05-27',
+                            date: getFormattedDateWithOffset(end, offset),
                             description: `${i.nome} - Acompanhamento frequente de sinais vitais (Observação)`,
                             status: 'pendente'
                         });
                     });
 
                     ativoIdosos.slice(0, 3).forEach(i => {
+                        const offset = (nextRecordId - 1) % diffDays;
                         dynamicTableData.push({
                             id: nextRecordId++,
-                            date: '2026-05-27',
+                            date: getFormattedDateWithOffset(end, offset),
                             description: `${i.nome} - Sinais vitais normais e estáveis`,
                             status: 'concluida'
                         });
@@ -776,7 +811,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                     if (dynamicTableData.length === 0) {
                         dynamicTableData.push({
                             id: 1,
-                            date: '2026-05-27',
+                            date: getFormattedDateWithOffset(end, 0),
                             description: 'Todos os residentes apresentam sinais estáveis',
                             status: 'concluida'
                         });
@@ -784,54 +819,141 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                 } else {
                     const status = resident.estadoSaude || 'ATIVO';
                     const obs = resident.observacoes || '';
-                    
-                    const seed = resident.id % 5;
-                    let values = [88, 92, 90, 89, 95, 91, 93];
+
+                    let estavelDays = 0;
+                    let obsDays = 0;
+                    let graveDays = 0;
+
                     if (status === 'GRAVE') {
-                        values = [55 + seed, 48 - seed, 52 + seed, 45 - seed, 56 + seed, 42 - seed, 49 + seed];
+                        graveDays = Math.ceil(diffDays * 0.7);
+                        obsDays = Math.floor(diffDays * 0.3);
+                        estavelDays = 0;
                     } else if (status === 'OBSERVACAO') {
-                        values = [72 + seed, 70 - seed, 75 + seed, 68 - seed, 74 + seed, 71 - seed, 73 + seed];
+                        graveDays = 0;
+                        obsDays = Math.ceil(diffDays * 0.6);
+                        estavelDays = Math.floor(diffDays * 0.4);
                     } else {
-                        values = [88 + seed, 92 - seed, 90 + seed, 89 - seed, 95 + seed, 91 - seed, 93 + seed];
+                        graveDays = 0;
+                        obsDays = Math.floor(diffDays * 0.1);
+                        estavelDays = diffDays - obsDays;
                     }
 
-                    const total = values.reduce((sum, v) => sum + v, 0);
-                    const average = total / 7;
-                    const maxVal = Math.max(...values);
-                    const minVal = Math.min(...values);
-                    const highestIdx = values.indexOf(maxVal);
-                    const lowestIdx = values.indexOf(minVal);
-                    const weekdayLabelsLong = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
+                    const average = (estavelDays / diffDays) * 100;
+
+                    const counts = [
+                        { label: 'Estável', count: estavelDays },
+                        { label: 'Em Observação', count: obsDays },
+                        { label: 'Grave', count: graveDays }
+                    ];
+                    counts.sort((a, b) => b.count - a.count);
+                    const highest = `${counts[0].label} (${counts[0].count}d)`;
+                    const lowest = `${counts[2].label} (${counts[2].count}d)`;
 
                     dynamicReportData = {
-                        labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'],
-                        values,
+                        labels: ['Estável', 'Em Observação', 'Grave'],
+                        values: [estavelDays, obsDays, graveDays],
                         summary: {
-                            total,
+                            total: diffDays,
                             average,
-                            highest: weekdayLabelsLong[highestIdx],
-                            lowest: weekdayLabelsLong[lowestIdx]
+                            highest,
+                            lowest
                         }
                     };
 
+                    let recordId = 1;
                     if (status === 'GRAVE') {
-                        dynamicTableData.push({ id: 1, date: '2026-05-27', description: 'Monitoramento clínico intensivo (Grave)', status: 'concluida' });
-                        dynamicTableData.push({ id: 2, date: '2026-05-26', description: 'Frequência cardíaca e pressão sob alerta', status: 'concluida' });
-                        dynamicTableData.push({ id: 3, date: '2026-05-25', description: 'Consulta médica urgente realizada', status: 'concluida' });
+                        if (diffDays >= 1) {
+                            dynamicTableData.push({ 
+                                id: recordId++, 
+                                date: getFormattedDateWithOffset(end, 0), 
+                                description: `${resident.nome} - Monitoramento clínico intensivo (Grave)`, 
+                                status: 'cancelada' 
+                            });
+                        }
+                        if (diffDays >= 2) {
+                            dynamicTableData.push({ 
+                                id: recordId++, 
+                                date: getFormattedDateWithOffset(end, 1), 
+                                description: `${resident.nome} - Frequência cardíaca e pressão sob alerta clínico`, 
+                                status: 'cancelada' 
+                            });
+                        }
+                        if (diffDays >= 3) {
+                            dynamicTableData.push({ 
+                                id: recordId++, 
+                                date: getFormattedDateWithOffset(end, 2), 
+                                description: `${resident.nome} - Consulta médica urgente realizada`, 
+                                status: 'cancelada' 
+                            });
+                        }
                     } else if (status === 'OBSERVACAO') {
-                        dynamicTableData.push({ id: 1, date: '2026-05-27', description: 'Pressão Arterial: 130/85 (Observação)', status: 'concluida' });
-                        dynamicTableData.push({ id: 2, date: '2026-05-26', description: 'Temperatura aferida: 36.8°C', status: 'concluida' });
-                        dynamicTableData.push({ id: 3, date: '2026-05-24', description: 'Acompanhamento na caminhada assistida', status: 'concluida' });
+                        if (diffDays >= 1) {
+                            dynamicTableData.push({ 
+                                id: recordId++, 
+                                date: getFormattedDateWithOffset(end, 0), 
+                                description: `${resident.nome} - Pressão Arterial: 130/85 (Observação)`, 
+                                status: 'pendente' 
+                            });
+                        }
+                        if (diffDays >= 2) {
+                            dynamicTableData.push({ 
+                                id: recordId++, 
+                                date: getFormattedDateWithOffset(end, 1), 
+                                description: `${resident.nome} - Temperatura corporal aferida: 36.8°C`, 
+                                status: 'pendente' 
+                            });
+                        }
+                        if (diffDays >= 3) {
+                            dynamicTableData.push({ 
+                                id: recordId++, 
+                                date: getFormattedDateWithOffset(end, 2), 
+                                description: `${resident.nome} - Acompanhamento na caminhada assistida`, 
+                                status: 'pendente' 
+                            });
+                        }
                     } else {
-                        dynamicTableData.push({ id: 1, date: '2026-05-27', description: 'Sinais vitais normais e estáveis: 120/80', status: 'concluida' });
-                        dynamicTableData.push({ id: 2, date: '2026-05-25', description: 'Avaliação física geral diária', status: 'concluida' });
-                        dynamicTableData.push({ id: 3, date: '2026-05-23', description: 'Nenhuma queixa de dor reportada', status: 'concluida' });
+                        if (diffDays >= 1) {
+                            dynamicTableData.push({ 
+                                id: recordId++, 
+                                date: getFormattedDateWithOffset(end, 0), 
+                                description: `${resident.nome} - Sinais vitais normais e estáveis: 120/80`, 
+                                status: 'concluida' 
+                            });
+                        }
+                        if (diffDays >= 2) {
+                            dynamicTableData.push({ 
+                                id: recordId++, 
+                                date: getFormattedDateWithOffset(end, 1), 
+                                description: `${resident.nome} - Avaliação física geral diária concluída`, 
+                                status: 'concluida' 
+                            });
+                        }
+                        if (diffDays >= 3) {
+                            dynamicTableData.push({ 
+                                id: recordId++, 
+                                date: getFormattedDateWithOffset(end, 2), 
+                                description: `${resident.nome} - Nenhuma queixa de dor reportada`, 
+                                status: 'concluida' 
+                            });
+                        }
                     }
 
-                    if (obs && obs.trim().length > 0) {
-                        dynamicTableData.push({ id: 4, date: '2026-05-22', description: `Anotações: ${obs.substring(0, 32)}...`, status: 'concluida' });
-                    } else {
-                        dynamicTableData.push({ id: 4, date: '2026-05-22', description: 'Status geral: Sem observações adicionais', status: 'concluida' });
+                    if (obs && obs.trim().length > 0 && diffDays >= 4) {
+                        const statusRecord = status === 'GRAVE' ? 'cancelada' : status === 'OBSERVACAO' ? 'pendente' : 'concluida';
+                        dynamicTableData.push({ 
+                            id: recordId++, 
+                            date: getFormattedDateWithOffset(end, 3), 
+                            description: `${resident.nome} - Anotações: ${obs.trim()}`, 
+                            status: statusRecord 
+                        });
+                    } else if (diffDays >= 4) {
+                        const statusRecord = status === 'GRAVE' ? 'cancelada' : status === 'OBSERVACAO' ? 'pendente' : 'concluida';
+                        dynamicTableData.push({ 
+                            id: recordId++, 
+                            date: getFormattedDateWithOffset(end, 3), 
+                            description: `${resident.nome} - Status geral: Sem observações adicionais`, 
+                            status: statusRecord 
+                        });
                     }
                 }
 
@@ -849,7 +971,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
         if (selectedResident) {
             carregarDadosRelatorio(selectedResident, selectedReport);
         }
-    }, [selectedResident, selectedReport]);
+    }, [selectedResident, selectedReport, dateFrom, dateTo, idosos, token]);
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -960,12 +1082,12 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                                         </Text>
                                     </TouchableOpacity>
 
-                                    {idosos.length === 0 ? (
+                                    {sortedIdosos.length === 0 ? (
                                         <Text style={{ color: '#6B7280', fontSize: 14, paddingVertical: 8 }}>
                                             Nenhum residente disponível
                                         </Text>
                                     ) : (
-                                        idosos.map((idoso) => (
+                                        sortedIdosos.map((idoso) => (
                                             <TouchableOpacity
                                                 key={idoso.id}
                                                 onPress={() => {
@@ -987,17 +1109,17 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                         {/* Data Range */}
                         <Text style={[styles.filterLabel, { marginTop: 16 }]}>Período</Text>
                         <View style={styles.dateRangeContainer}>
-                            <View style={styles.dateInput}>
-                                <Ionicons name="calendar-outline" size={16} color="#202c4b" />
+                            <TouchableOpacity style={styles.dateInput} onPress={() => openCalendar('from')}>
+                                <Ionicons name="calendar-outline" size={16} color="#202c4b" style={{ marginRight: 6 }} />
                                 <Text style={styles.dateInputText}>{dateFrom}</Text>
-                            </View>
-                            <View style={[styles.dateInput, { minWidth: 40, justifyContent: 'center' }]}>
+                            </TouchableOpacity>
+                            <View style={[styles.dateInput, { minWidth: 40, justifyContent: 'center', backgroundColor: '#F3F4F6' }]}>
                                 <Text style={{ color: '#9CA3AF', fontSize: 14 }}>até</Text>
                             </View>
-                            <View style={styles.dateInput}>
-                                <Ionicons name="calendar-outline" size={16} color="#202c4b" />
+                            <TouchableOpacity style={styles.dateInput} onPress={() => openCalendar('to')}>
+                                <Ionicons name="calendar-outline" size={16} color="#202c4b" style={{ marginRight: 6 }} />
                                 <Text style={styles.dateInputText}>{dateTo}</Text>
-                            </View>
+                            </TouchableOpacity>
                         </View>
                     </View>
 
@@ -1012,40 +1134,50 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                             <View style={styles.chartCard}>
                                 <Text style={styles.chartTitle}>
                                     {selectedReport === 'saude' ? 'Estabilidade Clínica (Sinais Vitais e Bem-Estar)'
-                                     : selectedReport === 'alimentacao' ? 'Adesão Nutricional (Aceitação das Refeições)'
-                                     : selectedReport === 'medicamentos' ? 'Conformidade de Medicamentos (Taxa de Adm.)'
+                                     : selectedReport === 'medicamentos' ? 'Situação de Medicamentos (Status das Doses)'
                                      : 'Engajamento Geral (Atividades Diárias)'}
                                 </Text>
-                                {reportData.labels.map((label, index) => (
-                                    <View key={label} style={styles.simpleBarRow}>
-                                        <Text style={styles.simpleBarLabel}>{label}</Text>
-                                        <View style={styles.simpleBarTrack}>
-                                            <View style={[
-                                                styles.simpleBarFill, 
-                                                { width: `${selectedReport === 'atividades' 
-                                                    ? Math.min((reportData.values[index] || 0) * 15, 100) 
-                                                    : Math.min(reportData.values[index] || 0, 100)}%` }
-                                            ]} />
+                                {reportData.labels.map((label, index) => {
+                                    const val = reportData.values[index] || 0;
+                                    const maxVal = Math.max(...reportData.values, 1);
+                                    const fillWidth = (val / maxVal) * 100;
+                                    let displayVal = `${val}`;
+                                    
+                                    if (selectedReport === 'saude') {
+                                        const isTodos = selectedResident?.id === -1;
+                                        displayVal = isTodos 
+                                            ? `${val} ${val === 1 ? 'idoso' : 'idosos'}` 
+                                            : `${val} ${val === 1 ? 'dia' : 'dias'}`;
+                                    } else if (selectedReport === 'medicamentos') {
+                                        displayVal = `${val} remédio${val === 1 ? '' : 's'}`;
+                                    }
+                                    
+                                    return (
+                                        <View key={label} style={styles.simpleBarRow}>
+                                            <Text style={styles.simpleBarLabel} numberOfLines={1}>{label}</Text>
+                                            <View style={styles.simpleBarTrack}>
+                                                <View style={[
+                                                    styles.simpleBarFill, 
+                                                    { width: `${fillWidth}%` }
+                                                ]} />
+                                            </View>
+                                            <Text style={[styles.simpleBarValue, { width: 80 }]}>
+                                                {displayVal}
+                                            </Text>
                                         </View>
-                                        <Text style={styles.simpleBarValue}>
-                                            {reportData.values[index]}
-                                            {selectedReport !== 'atividades' ? '%' : ''}
-                                        </Text>
-                                    </View>
-                                ))}
+                                    );
+                                })}
 
                                 <View style={styles.summaryGrid}>
                                     <View style={styles.summaryItem}>
                                         <Text style={styles.summaryLabel}>
                                             {selectedReport === 'atividades' ? 'Total Concluído' 
-                                             : selectedReport === 'medicamentos' ? 'Foco de Monitoria'
-                                             : selectedReport === 'alimentacao' ? 'Tipo de Dieta' 
+                                             : selectedReport === 'medicamentos' ? 'Total de Remédios'
                                              : 'Monitorados'}
                                         </Text>
                                         <Text style={styles.summaryValue}>
                                             {selectedReport === 'saude' ? (selectedResident?.id === -1 ? `${idosos.length} idosos` : '1 idoso') 
-                                             : selectedReport === 'medicamentos' ? (selectedResident?.id === -1 ? 'Todos' : 'Individual')
-                                             : selectedReport === 'alimentacao' ? (selectedResident?.id === -1 ? 'Geral' : 'Individual')
+                                             : selectedReport === 'medicamentos' ? `${reportData.summary.total} remédio${reportData.summary.total === 1 ? '' : 's'}`
                                              : reportData.summary.total}
                                         </Text>
                                     </View>
@@ -1053,7 +1185,6 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                                         <Text style={styles.summaryLabel}>
                                             {selectedReport === 'atividades' ? 'Média Diária' 
                                              : selectedReport === 'medicamentos' ? 'Taxa de Adesão'
-                                             : selectedReport === 'alimentacao' ? 'Aceitação Média' 
                                              : 'Índice de Estabilidade'}
                                         </Text>
                                         <Text style={styles.summaryValue}>
@@ -1064,7 +1195,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                                     <View style={styles.summaryItem}>
                                         <Text style={styles.summaryLabel}>
                                             {selectedReport === 'atividades' ? 'Pico de Atividade' 
-                                             : selectedReport === 'saude' ? 'Melhor Status' 
+                                             : (selectedReport === 'saude' || selectedReport === 'medicamentos') ? 'Status Predominante' 
                                              : 'Melhor Dia'}
                                         </Text>
                                         <Text style={styles.summaryValue} numberOfLines={1}>
@@ -1074,6 +1205,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                                     <View style={styles.summaryItem}>
                                         <Text style={styles.summaryLabel}>
                                             {selectedReport === 'atividades' ? 'Menor Atividade' 
+                                             : selectedReport === 'medicamentos' ? 'Status Menoritário'
                                              : 'Maior Risco'}
                                         </Text>
                                         <Text style={styles.summaryValue} numberOfLines={1}>
@@ -1104,10 +1236,22 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                                         <Text style={styles.tableDescription} numberOfLines={1}>
                                             {record.description}
                                         </Text>
-                                        <View style={[styles.tableBadge, getStatusColor(record.status)]}>
-                                            <Text style={[styles.tableBadgeText, getStatusTextColor(record.status)]}>
-                                                {record.status === 'concluida' ? '✓' : record.status === 'pendente' ? '⏳' : '✕'}
-                                            </Text>
+                                        <View style={[
+                                            styles.tableBadge, 
+                                            getStatusColor(record.status), 
+                                            selectedReport === 'saude' && { paddingHorizontal: 6, paddingVertical: 6, borderRadius: 8, minWidth: 28, minHeight: 28, justifyContent: 'center', alignItems: 'center' }
+                                        ]}>
+                                            {selectedReport === 'saude' ? (
+                                                <Ionicons 
+                                                    name={record.status === 'concluida' ? 'heart' : record.status === 'pendente' ? 'eye-outline' : 'warning-outline'} 
+                                                    size={15} 
+                                                    color={record.status === 'concluida' ? '#059669' : record.status === 'pendente' ? '#D97706' : '#DC2626'} 
+                                                />
+                                            ) : (
+                                                <Text style={[styles.tableBadgeText, getStatusTextColor(record.status)]}>
+                                                    {record.status === 'concluida' ? '✓' : record.status === 'pendente' ? '⏳' : '✕'}
+                                                </Text>
+                                            )}
                                         </View>
                                     </View>
                                 ))}
@@ -1125,6 +1269,177 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                 </View>
                 <View style={{ height: 100 }} />
             </ScrollView>
+
+            {/* Modal de Calendário Avançado */}
+            <Modal
+                visible={modalCalendarVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setModalCalendarVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setModalCalendarVisible(false)}
+                />
+                <View style={styles.modalSheet}>
+                    <View style={styles.modalHandle} />
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Filtrar Período de Relatórios</Text>
+                        <TouchableOpacity onPress={() => setModalCalendarVisible(false)}>
+                            <Text style={styles.modalClear}>Fechar</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Seleção Rápida de Ano */}
+                    <Text style={styles.filterLabel}>Ano</Text>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
+                    >
+                        {yearsRange.map(y => (
+                            <TouchableOpacity
+                                key={y}
+                                style={[
+                                    styles.filterChip,
+                                    calendarYear === y && styles.filterChipActive
+                                ]}
+                                onPress={() => setCalendarYear(y)}
+                            >
+                                <Text
+                                    style={[
+                                        styles.filterChipText,
+                                        calendarYear === y && styles.filterChipTextActive
+                                    ]}
+                                >
+                                    {y}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    {/* Seleção Rápida de Mês */}
+                    <Text style={styles.filterLabel}>Mês</Text>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
+                    >
+                        {mesesList.map((m, idx) => (
+                            <TouchableOpacity
+                                key={m}
+                                style={[
+                                    styles.filterChip,
+                                    calendarMonth === idx && styles.filterChipActive
+                                ]}
+                                onPress={() => setCalendarMonth(idx)}
+                            >
+                                <Text
+                                    style={[
+                                        styles.filterChipText,
+                                        calendarMonth === idx && styles.filterChipTextActive
+                                    ]}
+                                >
+                                    {m.slice(0, 3)}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    {/* Grade de Dias do Mês */}
+                    <View style={styles.calendarContainer}>
+                        {/* Cabeçalho dos dias da semana */}
+                        <View style={styles.calendarWeekdaysRow}>
+                            {diasSemana.map(d => (
+                                <Text key={d} style={styles.calendarWeekdayText}>
+                                    {d}
+                                </Text>
+                            ))}
+                        </View>
+
+                        {/* Grade de dias */}
+                        <View style={styles.calendarDaysGrid}>
+                            {(() => {
+                                const daysInMonth = getDaysInMonth(calendarMonth, calendarYear);
+                                const firstDay = getFirstDayOfMonth(calendarMonth, calendarYear);
+                                const gridItems = [];
+                                
+                                // Padding de dias do mês anterior
+                                for (let i = 0; i < firstDay; i++) {
+                                    gridItems.push(<View key={`empty-${i}`} style={styles.calendarDayCellEmpty} />);
+                                }
+                                
+                                // Dias reais
+                                const targetDate = calendarTarget === 'from' ? parseDDMMYYYY(dateFrom) : parseDDMMYYYY(dateTo);
+                                for (let d = 1; d <= daysInMonth; d++) {
+                                    const isSelected = targetDate.getDate() === d &&
+                                                       targetDate.getMonth() === calendarMonth &&
+                                                       targetDate.getFullYear() === calendarYear;
+                                    
+                                    const todayObj = new Date();
+                                    const isToday = todayObj.getDate() === d &&
+                                                    todayObj.getMonth() === calendarMonth &&
+                                                    todayObj.getFullYear() === calendarYear;
+                                    
+                                    gridItems.push(
+                                        <TouchableOpacity
+                                            key={`day-${d}`}
+                                            style={[
+                                                styles.calendarDayCell,
+                                                isSelected && styles.calendarDayCellSelected,
+                                                isToday && !isSelected && styles.calendarDayCellToday
+                                            ]}
+                                            onPress={() => {
+                                                const selectedD = new Date(calendarYear, calendarMonth, d);
+                                                const formatted = formatDDMMYYYY(selectedD);
+                                                if (calendarTarget === 'from') {
+                                                    setDateFrom(formatted);
+                                                } else {
+                                                    setDateTo(formatted);
+                                                }
+                                                setModalCalendarVisible(false);
+                                            }}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.calendarDayText,
+                                                    isSelected && styles.calendarDayTextSelected,
+                                                    isToday && !isSelected && styles.calendarDayTextToday
+                                                ]}
+                                            >
+                                                {d}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                }
+                                return gridItems;
+                            })()}
+                        </View>
+                    </View>
+
+                    {/* Atalhos Rápidos no Rodapé */}
+                    <Text style={styles.filterLabel}>Atalhos Rápidos</Text>
+                    <View style={styles.presetsRow}>
+                        <TouchableOpacity style={styles.presetBtn} onPress={() => handleQuickPreset('hoje')}>
+                            <Ionicons name="today-outline" size={13} color="#202c4b" style={{ marginRight: 4 }} />
+                            <Text style={styles.presetBtnText}>Hoje</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.presetBtn} onPress={() => handleQuickPreset('7dias')}>
+                            <Ionicons name="calendar-outline" size={13} color="#202c4b" style={{ marginRight: 4 }} />
+                            <Text style={styles.presetBtnText}>Últimos 7d</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.presetBtn} onPress={() => handleQuickPreset('mes_atual')}>
+                            <Ionicons name="arrow-forward-outline" size={13} color="#202c4b" style={{ marginRight: 4 }} />
+                            <Text style={styles.presetBtnText}>Mês Atual</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.presetBtn} onPress={() => handleQuickPreset('mes_anterior')}>
+                            <Ionicons name="arrow-back-outline" size={13} color="#202c4b" style={{ marginRight: 4 }} />
+                            <Text style={styles.presetBtnText}>Mês Anterior</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };

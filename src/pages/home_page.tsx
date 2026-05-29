@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     View,
     Text,
@@ -75,6 +75,14 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [modalMedicamentosVisible, setModalMedicamentosVisible] = useState(false);
+    const [isAscending, setIsAscending] = useState(true);
+
+    const sortedIdosos = useMemo(() => {
+        return [...idosos].sort((a, b) => {
+            const comparison = (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
+            return isAscending ? comparison : -comparison;
+        });
+    }, [idosos, isAscending]);
 
     useEffect(() => {
         carregarDados();
@@ -88,7 +96,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                 buscarIdosos(token),
                 buscarResumo(token),
             ]);
-            setIdosos(idososData);
+            setIdosos(idososData || []);
             setResumo(resumoData);
         } catch (err) {
             const mensagemErro = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -281,12 +289,23 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                         <View style={styles.section}>
                             <View style={styles.sectionHeader}>
                                 <Text style={styles.sectionTitle}>Idosos Cadastrados</Text>
-                                <TouchableOpacity>
-                                    <Ionicons name="filter" size={20} color="#6B7280" />
+                                <TouchableOpacity 
+                                    onPress={() => setIsAscending(!isAscending)} 
+                                    activeOpacity={0.7}
+                                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                                >
+                                    <Ionicons 
+                                        name={isAscending ? "caret-up" : "caret-down"} 
+                                        size={16} 
+                                        color="#202c4b" 
+                                    />
+                                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#202c4b' }}>
+                                        {isAscending ? 'A-Z' : 'Z-A'}
+                                    </Text>
                                 </TouchableOpacity>
                             </View>
 
-                            {idosos.length === 0 ? (
+                            {sortedIdosos.length === 0 ? (
                                 <View style={styles.emptyState}>
                                     <View style={styles.emptyIcon}>
                                         <Ionicons name="people-outline" size={48} color="#D1D5DB" />
@@ -295,7 +314,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                                     <Text style={styles.emptySubtext}>Adicione o primeiro idoso para começar</Text>
                                 </View>
                             ) : (
-                                idosos.map((idoso, index) => {
+                                sortedIdosos.map((idoso, index) => {
                                     const fotoUri = getFotoUri(idoso.fotoUrl);
 
                                     return (
@@ -410,14 +429,14 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                         Selecione um idoso cadastrado para visualizar e gerenciar sua medicação diária.
                     </Text>
 
-                    {idosos.length === 0 ? (
+                    {sortedIdosos.length === 0 ? (
                         <View style={styles.emptyStateContainer}>
                             <Ionicons name="people-outline" size={40} color="#9CA3AF" />
                             <Text style={styles.emptyStateText}>Nenhum idoso cadastrado para exibir.</Text>
                         </View>
                     ) : (
                         <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
-                            {idosos.map((idoso) => {
+                            {sortedIdosos.map((idoso) => {
                                 const fotoUri = getFotoUri(idoso.fotoUrl);
                                 return (
                                     <TouchableOpacity
@@ -452,12 +471,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                 </View>
             </Modal>
 
-            {/* Floating Action Button */}
-            {(currentPage as string) !== 'agenda' && (
-                <TouchableOpacity style={styles.fab} onPress={() => { setAgendaTab('atividades'); setCurrentPage('agenda'); }}>
-                    <Ionicons name="add" size={28} color="#FFFFFF" />
-                </TouchableOpacity>
-            )}
+
 
             <BottomTabBar
                 activeTab={currentPage}

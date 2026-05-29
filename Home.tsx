@@ -18,10 +18,9 @@ interface LoginScreenProps {
   onLoginSuccess: (token: string, role: string) => void;
   onForgotPassword: () => void;
   onSignUp: () => void;
-  onDemoAccess?: () => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForgotPassword, onSignUp, onDemoAccess }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForgotPassword, onSignUp }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -50,15 +49,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
       setIsLoading(false);
       Alert.alert('Erro', 'Não foi possível conectar ao servidor');
     }
-  };
-
-  const handleDemoAccess = () => {
-    if (onDemoAccess) {
-      onDemoAccess();
-      return;
-    }
-
-    onLoginSuccess('demo-token', 'admin');
   };
 
   const handleForgotPasswordPress = () => {
@@ -161,15 +151,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
               </>
             )}
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.demoButton}
-            onPress={handleDemoAccess}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="play-circle-outline" size={18} color="#202c4b" />
-            <Text style={styles.demoButtonText}>Entrar sem backend</Text>
-          </TouchableOpacity>
+          
         </View>
 
         {/* Sign Up Link */}
@@ -321,23 +303,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  demoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 12,
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-    backgroundColor: '#FFFFFF',
-  },
-  demoButtonText: {
-    color: '#202c4b',
-    fontSize: 15,
-    fontWeight: '700',
-  },
+
   signUpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',

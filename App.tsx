@@ -22,12 +22,6 @@ export default function App() {
     setCurrentScreen('home');
   };
 
-  const handleDemoAccess = () => {
-    setUserToken(null);
-    setUserRole('admin'); // Admins por padrão no modo demo para permitir testar todas as funcionalidades de edição
-    setIdosoSelecionadoId(null);
-    setCurrentScreen('home');
-  };
 
   const handleForgotPassword = () => setCurrentScreen('forgotPassword');
   const handleSignUp = () => setCurrentScreen('signUp');
@@ -85,7 +79,6 @@ export default function App() {
           onLoginSuccess={handleLoginSuccess}
           onForgotPassword={handleForgotPassword}
           onSignUp={handleSignUp}
-          onDemoAccess={handleDemoAccess}
         />
         <StatusBar style="dark" />
       </>

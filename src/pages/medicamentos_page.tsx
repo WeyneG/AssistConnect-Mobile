@@ -22,6 +22,8 @@ Notifications.setNotificationHandler({
         shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
     }),
 });
 
@@ -51,11 +53,11 @@ export const MedicamentosPage: React.FC<MedicamentosPageProps> = ({ token }) => 
 
     // Solicitar permissão para notificações
     const solicitarPermissaoNotificacoes = async () => {
-        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        const { status: existingStatus } = await Notifications.getPermissionsAsync() as any;
         let finalStatus = existingStatus;
 
         if (existingStatus !== 'granted') {
-            const { status } = await Notifications.requestPermissionsAsync();
+            const { status } = await Notifications.requestPermissionsAsync() as any;
             finalStatus = status;
         }
 
