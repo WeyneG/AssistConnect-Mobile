@@ -26,6 +26,7 @@ export interface IdosoResponse {
     foto_url?: string; // Suporte para o nome vindo do banco (snake_case)
     quarto?: string;
     ultimaVisita?: string;
+    status?: string;
 }
 
 export interface Idoso extends IdosoResponse {
@@ -51,8 +52,8 @@ const calcularIdade = (dataNascimento: string): number => {
 };
 
 const mapearStatus = (estadoSaude: string): 'ativo' | 'inativo' => {
-    const estado = estadoSaude?.toUpperCase();
-    return ['ESTAVEL', 'ATIVO', 'RECUPERANDO'].includes(estado) ? 'ativo' : 'inativo';
+    // Todos os idosos atualmente cadastrados no banco representam residentes ativos na instituição.
+    return 'ativo';
 };
 
 const mapearIdoso = (response: IdosoResponse): Idoso => {
@@ -61,7 +62,7 @@ const mapearIdoso = (response: IdosoResponse): Idoso => {
         // 💡 CORREÇÃO AQUI: Garante que fotoUrl pegue o valor de foto_url caso venha do banco assim
         fotoUrl: response.fotoUrl || response.foto_url,
         idade: calcularIdade(response.dataNascimento),
-        status: mapearStatus(response.estadoSaude),
+        status: response.status ? (response.status.toLowerCase() as 'ativo' | 'inativo') : 'ativo',
     };
 };
 
@@ -173,6 +174,50 @@ export const buscarIdosos = async (token?: string, page: number = 0, size: numbe
     } catch (err) {
         console.warn('[API] Erro ao buscar idosos do backend (offline), usando mock:', err);
         return idososMock;
+    }
+};
+
+export interface UsuarioResponse {
+    id: number;
+    name: string;
+    nome?: string;
+    email: string;
+    role: string;
+}
+
+export const buscarUsuarios = async (token?: string): Promise<UsuarioResponse[]> => {
+    const usuariosMock: UsuarioResponse[] = [
+        { id: 1, name: 'Marina', email: 'marina@email.com', role: 'FUNCIONARIO' },
+        { id: 2, name: 'Juliana Costa', email: 'juliana@email.com', role: 'FUNCIONARIO' },
+        { id: 3, name: 'Renato Pereira', email: 'renato@email.com', role: 'FAMILIAR' },
+    ];
+
+    if (!token || token === 'demo-token') {
+        return usuariosMock;
+    }
+
+    try {
+        const headers: any = { 'Content-Type': 'application/json' };
+        headers['Authorization'] = `Bearer ${token}`;
+
+        const url = `${API_BASE_URL}/usuarios?size=1000&page=0&sort=name,asc`;
+        const response = await fetch(url, { method: 'GET', headers });
+        if (!response.ok) throw new Error('Erro ao buscar usuários');
+
+        const data = await response.json();
+        const list = Array.isArray(data) ? data : (data.content || []);
+        console.log('[API] buscarUsuarios list from backend:', JSON.stringify(list));
+        if (list.length === 0) return usuariosMock;
+        return list.map((u: any) => ({
+            id: u.id,
+            name: u.name || u.nome || '',
+            nome: u.nome || u.name || '',
+            email: u.email || '',
+            role: u.role || 'FUNCIONARIO'
+        }));
+    } catch (err) {
+        console.warn('[API] Erro ao buscar usuários do backend (offline), usando mock:', err);
+        return usuariosMock;
     }
 };
 
@@ -289,24 +334,22 @@ export const buscarResumo = async (token?: string): Promise<ResumoIdosos> => {
     }
 
     try {
-        const headers: any = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
+        // Busca a lista real de idosos do banco de dados para computar status reais
+        const idosos = await buscarIdosos(token);
+        const total = idosos.length;
+        const ativos = idosos.filter(i => i.status === 'ativo').length;
+        const inativos = idosos.filter(i => i.status === 'inativo').length;
 
-        const response = await fetch(`${API_BASE_URL}/idosos/count`, { method: 'GET', headers });
-        if (!response.ok) throw new Error('Erro ao buscar resumo');
-
-        const data = await response.json();
-        const total = typeof data === 'number' ? data : (data.total || data.totalElements || 0);
         return {
-            total: total,
-            ativos: data.ativos || Math.ceil(total * 0.8),
-            inativos: data.inativos || Math.floor(total * 0.2),
+            total,
+            ativos,
+            inativos
         };
     } catch (err) {
-        console.warn('[API] Erro ao buscar resumo real do backend, usando mock:', err);
+        console.warn('[API] Erro ao buscar resumo real do backend:', err);
         return {
-            total: 3,
-            ativos: 3,
+            total: 0,
+            ativos: 0,
             inativos: 0
         };
     }
@@ -597,44 +640,72 @@ export const buscarMedicamentos = async (
     residenteId?: number | null,
     token?: string
 ): Promise<Medicamento[]> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
+    if (!token || token === 'demo-token') {
+        return residenteId
+            ? medicamentosMockCache.filter(m => m.residenteId === residenteId)
+            : medicamentosMockCache;
+    }
 
-    // Filtra por residente se especificado
-    let resultado = residenteId
-        ? medicamentosMockCache.filter(m => m.residenteId === residenteId)
-        : medicamentosMockCache;
+    const headers: any = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    // TODO: Implementar filtro por data quando backend suportar
-    // Por enquanto, retorna todos os medicamentos do residente
-    // Em produção, a API deve filtrar por data no backend
-
-    return resultado;
+    try {
+        let url = `${API_BASE_URL}/medicamentos`;
+        if (residenteId) {
+            url += `?residenteId=${residenteId}`;
+        }
+        const response = await fetch(url, { method: 'GET', headers });
+        if (!response.ok) return [];
+        const data = await response.json();
+        return data as Medicamento[];
+    } catch (err) {
+        console.warn('[API] Erro ao buscar medicamentos do backend:', err);
+        return residenteId
+            ? medicamentosMockCache.filter(m => m.residenteId === residenteId)
+            : medicamentosMockCache;
+    }
 };
 
 export const criarMedicamento = async (
     med: Omit<Medicamento, 'id' | 'residenteNome'>,
     token?: string
 ): Promise<Medicamento> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const id = medicamentosMockCache.length > 0 ? Math.max(...medicamentosMockCache.map(m => m.id)) + 1 : 1;
-    let residenteNome = 'Residente';
-    try {
-        if (token && token !== 'demo-token') {
-            const res = await buscarIdosoPorId(med.residenteId, token);
-            residenteNome = res.nome;
-        } else {
-            residenteNome = med.residenteId === 1 ? 'Maria Silva (Demo)' : med.residenteId === 2 ? 'João Santos (Demo)' : 'Ana Costa (Demo)';
-        }
-    } catch { }
+    if (!token || token === 'demo-token') {
+        const id = medicamentosMockCache.length > 0 ? Math.max(...medicamentosMockCache.map(m => m.id)) + 1 : 1;
+        const novoMed: Medicamento = {
+            ...med,
+            id,
+            residenteNome: med.residenteId === 1 ? 'Maria Silva (Demo)' : med.residenteId === 2 ? 'João Santos (Demo)' : 'Ana Costa (Demo)',
+            status: med.status || 'pendente'
+        };
+        medicamentosMockCache.push(novoMed);
+        return novoMed;
+    }
 
-    const novoMed: Medicamento = {
-        ...med,
-        id,
-        residenteNome,
-        status: med.status || 'pendente'
-    };
-    medicamentosMockCache.push(novoMed);
-    return novoMed;
+    const headers: any = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/medicamentos`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(med)
+        });
+        if (!response.ok) throw new Error('Erro ao criar medicamento no backend');
+        const salvo = await response.json();
+        return salvo as Medicamento;
+    } catch (err) {
+        console.warn('[API] Erro ao criar medicamento no backend:', err);
+        const id = medicamentosMockCache.length > 0 ? Math.max(...medicamentosMockCache.map(m => m.id)) + 1 : 1;
+        const novoMed: Medicamento = {
+            ...med,
+            id,
+            residenteNome: 'Residente',
+            status: med.status || 'pendente'
+        };
+        medicamentosMockCache.push(novoMed);
+        return novoMed;
+    }
 };
 
 export const atualizarMedicamento = async (
@@ -642,25 +713,65 @@ export const atualizarMedicamento = async (
     med: Partial<Medicamento>,
     token?: string
 ): Promise<Medicamento> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const index = medicamentosMockCache.findIndex(m => m.id === id);
-    if (index === -1) throw new Error('Medicamento não encontrado');
-    medicamentosMockCache[index] = {
-        ...medicamentosMockCache[index],
-        ...med
-    };
-    return medicamentosMockCache[index];
+    if (!token || token === 'demo-token') {
+        const index = medicamentosMockCache.findIndex(m => m.id === id);
+        if (index === -1) throw new Error('Medicamento não encontrado');
+        medicamentosMockCache[index] = {
+            ...medicamentosMockCache[index],
+            ...med
+        };
+        return medicamentosMockCache[index];
+    }
+
+    const headers: any = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/medicamentos/${id}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(med)
+        });
+        if (!response.ok) throw new Error('Erro ao atualizar medicamento no backend');
+        const atualizado = await response.json();
+        return atualizado as Medicamento;
+    } catch (err) {
+        console.warn('[API] Erro ao atualizar medicamento no backend:', err);
+        const index = medicamentosMockCache.findIndex(m => m.id === id);
+        if (index === -1) throw new Error('Medicamento não encontrado');
+        medicamentosMockCache[index] = {
+            ...medicamentosMockCache[index],
+            ...med
+        };
+        return medicamentosMockCache[index];
+    }
 };
 
 export const deletarMedicamento = async (id: number, token?: string): Promise<void> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    medicamentosMockCache = medicamentosMockCache.filter(m => m.id !== id);
+    if (!token || token === 'demo-token') {
+        medicamentosMockCache = medicamentosMockCache.filter(m => m.id !== id);
+        return;
+    }
+
+    const headers: any = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/medicamentos/${id}`, {
+            method: 'DELETE',
+            headers
+        });
+        if (!response.ok) throw new Error('Erro ao deletar medicamento no backend');
+    } catch (err) {
+        console.warn('[API] Erro ao deletar medicamento no backend:', err);
+        medicamentosMockCache = medicamentosMockCache.filter(m => m.id !== id);
+    }
 };
 
 // ─── Atividades ───────────────────────────────────────────────────────
 
 export type TipoAtividade = 'medicacao' | 'fisioterapia' | 'consulta' | 'lazer' | 'alimentacao' | 'higiene';
-export type StatusAtividade = 'pendente' | 'concluida' | 'cancelada';
+export type StatusAtividade = 'pendente' | 'em_andamento' | 'concluida' | 'atrasada' | 'cancelada';
 
 export interface Atividade {
     id: number;
@@ -715,13 +826,8 @@ export const buscarAtividades = async (filtros?: FiltrosAtividade, token?: strin
         }
         return filtradas;
     }
-    filtradas = filtradas.filter(a => a.status === filtros.status);
-}
-        }
-return filtradas;
-    }
 
-try {
+    try {
     const headers: any = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -753,8 +859,9 @@ try {
             idosoId: filtros?.idosoId || 0,
             horario: horarioStr,
             tipo: tipo,
-            status: 'concluida' as StatusAtividade,
-            responsavel: dto.responsavelNome || 'Não atribuído'
+            status: (dto.status ? dto.status.toLowerCase() : 'pendente') as StatusAtividade,
+            responsavel: dto.responsavelNome || 'Não atribuído',
+            data: dto.data || ''
         };
     });
 
@@ -787,8 +894,8 @@ try {
 };
 
 export const criarAtividade = async (
-    atividade: { nome: string; data: string; horario_inicio: string; horario_fim: string; observacoes: string; responsavelId: number },
-    idosoId?: number,
+    atividade: { nome: string; data: string; horario_inicio: string; horario_fim: string; observacoes: string; responsavelId: number; status?: string },
+    idosoIds?: number[] | number,
     token?: string
 ): Promise<any> => {
     const headers: any = { 'Content-Type': 'application/json' };
@@ -807,20 +914,65 @@ export const criarAtividade = async (
 
     const salvo = await response.json();
 
-    if (idosoId && token) {
-        await fetch(`${API_BASE_URL}/alocacao/atividades/${salvo.id}/alocar`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ idosoIds: [idosoId] }),
-        });
+    if (idosoIds && token) {
+        const ids = Array.isArray(idosoIds) ? idosoIds : [idosoIds];
+        if (ids.length > 0) {
+            await fetch(`${API_BASE_URL}/alocacao/atividades/${salvo.id}/alocar`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ idosoIds: ids }),
+            });
+        }
     }
 
     return salvo;
 };
 
+export const buscarIdososDaAtividade = async (
+    atividadeId: number,
+    token?: string
+): Promise<number[]> => {
+    if (!token || token === 'demo-token') return [];
+    try {
+        const headers: any = { 'Content-Type': 'application/json' };
+        headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(`${API_BASE_URL}/alocacao/atividades/${atividadeId}/idosos`, {
+            method: 'GET',
+            headers,
+        });
+        if (!response.ok) return [];
+        return await response.json();
+    } catch (e) {
+        console.warn('[API] Erro ao buscar idosos da atividade:', e);
+        return [];
+    }
+};
+
+export const atualizarAlocacoesAtividade = async (
+    atividadeId: number,
+    idosoIds: number[],
+    token?: string
+): Promise<any> => {
+    if (!token || token === 'demo-token') return null;
+    const headers: any = { 'Content-Type': 'application/json' };
+    headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(`${API_BASE_URL}/alocacao/atividades/${atividadeId}/atualizar`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ idosoIds }),
+    });
+
+    if (!response.ok) {
+        throw new Error('Falha ao atualizar alocações da atividade');
+    }
+    return response;
+};
+
 export const atualizarAtividade = async (
     id: number,
-    atividade: { nome: string; data: string; horario_inicio: string; horario_fim: string; observacoes: string; responsavelId: number },
+    atividade: { nome: string; data: string; horario_inicio: string; horario_fim: string; observacoes: string; responsavelId: number; status?: string },
     token?: string
 ): Promise<any> => {
     const headers: any = { 'Content-Type': 'application/json' };

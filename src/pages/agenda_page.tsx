@@ -14,7 +14,11 @@ import {
     buscarAtividades,
     Atividade,
     criarAtividade,
-    atualizarAtividade
+    atualizarAtividade,
+    buscarIdosos,
+    buscarIdososDaAtividade,
+    atualizarAlocacoesAtividade,
+    Idoso
 } from '../services/api';
 
 type Periodo = 'manhã' | 'tarde' | 'noite';
@@ -270,9 +274,70 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
     const isAllowedToEdit = userRole?.toLowerCase() === 'admin' || userRole?.toLowerCase() === 'funcionario';
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<ViewMode>('lista');
+
+    // --- Estados e utilitários do Calendário Customizado ---
+    const [modalCalendarVisible, setModalCalendarVisible] = useState(false);
+    const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
+    const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+
+    const openCalendar = () => {
+        setCalendarMonth(selectedDate.getMonth());
+        setCalendarYear(selectedDate.getFullYear());
+        setModalCalendarVisible(true);
+    };
+
+    const getDaysInMonth = (month: number, year: number) => {
+        return new Date(year, month + 1, 0).getDate();
+    };
+
+    const getFirstDayOfMonth = (month: number, year: number) => {
+        return new Date(year, month, 1).getDay();
+    };
+
+    const handleQuickPreset = (preset: 'hoje' | 'amanha' | 'semana' | 'mes') => {
+        const target = new Date();
+        if (preset === 'hoje') {
+            // Hoje
+        } else if (preset === 'amanha') {
+            target.setDate(target.getDate() + 1);
+        } else if (preset === 'semana') {
+            target.setDate(target.getDate() + 7);
+        } else if (preset === 'mes') {
+            target.setMonth(target.getMonth() + 1);
+        }
+        setSelectedDate(target);
+        setCalendarMonth(target.getMonth());
+        setCalendarYear(target.getFullYear());
+        setModalCalendarVisible(false);
+    };
+
+    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const mesesList = [
+        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    const currentYear = new Date().getFullYear();
+    const yearsRange = Array.from({ length: 15 }, (_, i) => currentYear - 6 + i);
+
     const [selectedActivityId, setSelectedActivityId] = useState<number | null>(null);
-    const [activities, setActivities] = useState<Activity[]>(createDemoActivities());
+    const [activities, setActivities] = useState<Activity[]>([]);
     const [draftActivity, setDraftActivity] = useState<Activity | null>(null);
+
+    const [idosos, setIdosos] = useState<Idoso[]>([]);
+    const [selectedIdosoIds, setSelectedIdosoIds] = useState<number[]>([]);
+
+    // Carregar lista de residentes ativos
+    useEffect(() => {
+        const carregarIdosos = async () => {
+            try {
+                const data = await buscarIdosos(token, 0, 1000); // busca todos
+                setIdosos(data || []);
+            } catch (err) {
+                console.warn('[Agenda] Erro ao buscar idosos:', err);
+            }
+        };
+        carregarIdosos();
+    }, [token]);
 
     // Estados de Integração
     const [activeTab, setActiveTab] = useState<'atividades' | 'cardapio'>(initialTab);
@@ -410,6 +475,8 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
 
         let status: ActivityStatus = 'pendente';
         if (act.status === 'concluida') status = 'concluida';
+        else if (act.status === 'em_andamento') status = 'em_andamento';
+        else if (act.status === 'atrasada') status = 'atrasada';
         else if (act.status === 'cancelada') status = 'atrasada';
 
         let location = 'Sala de convivência';
@@ -441,14 +508,10 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
             const apiActs = await buscarAtividades(undefined, token);
             const mappedActs = apiActs.map(act => mapApiAtividadeToActivity(act, dataStr));
             
-            if (mappedActs.length > 0) {
-                setActivities(mappedActs);
-            } else {
-                setActivities(createDemoActivities());
-            }
+            setActivities(mappedActs || []);
         } catch (err) {
-            console.warn('[Agenda] Erro ao carregar atividades do backend, usando mocks locais:', err);
-            setActivities(createDemoActivities());
+            console.warn('[Agenda] Erro ao carregar atividades do backend:', err);
+            setActivities([]);
         } finally {
             setLoadingActivities(false);
         }
@@ -474,11 +537,9 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
         try {
             const dataStr = dateKey(date);
             const data = await buscarCardapio(dataStr, token);
-            setCardapio(data);
+            setCardapio(data || []);
         } catch {
-            const dataStr = dateKey(date);
-            setCardapio(createDemoCardapio(dataStr));
-            setUsandoDemo(true);
+            setCardapio([]);
         } finally {
             setLoadingCardapio(false);
         }
@@ -491,14 +552,29 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
     const openDetails = (activity: Activity) => { setSelectedActivityId(activity.id); setViewMode('detalhe'); };
 
     const startCreating = () => {
+        setSelectedIdosoIds([]);
         setDraftActivity({ id: 0, date: selectedDateKey, period: 'manhã', time: '', title: '', resident: '', status: 'pendente', location: '', notes: '', responsible: '' });
         setViewMode('criar');
     };
 
     const saveNewActivity = async () => {
         if (!draftActivity || !draftActivity.title.trim()) return;
+        if (selectedIdosoIds.length === 0) {
+            Alert.alert('Atenção', 'Selecione pelo menos um residente para vincular à atividade.');
+            return;
+        }
         try {
             setLoadingActivities(true);
+            
+            // Constrói os nomes correspondentes para o estado local
+            const nomes = idosos
+                .filter(i => selectedIdosoIds.includes(i.id))
+                .map(i => i.nome)
+                .join(', ');
+            
+            const selecionouTodos = idosos.length > 0 && selectedIdosoIds.length === idosos.length;
+            const residentLabel = selecionouTodos ? 'Todos os Residentes' : (nomes || 'Residentes (Geral)');
+
             if (token && token !== 'demo-token') {
                 const apiPayload = {
                     nome: draftActivity.title,
@@ -506,12 +582,13 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                     horario_inicio: `${draftActivity.time}:00`,
                     horario_fim: `${parseInt(draftActivity.time.split(':')[0]) + 1}:00:00`,
                     observacoes: draftActivity.notes,
-                    responsavelId: 2
+                    responsavelId: 2,
+                    status: draftActivity.status
                 };
-                await criarAtividade(apiPayload, undefined, token);
+                await criarAtividade(apiPayload, selectedIdosoIds, token);
             }
             const newId = activities.length > 0 ? Math.max(...activities.map(a => a.id)) + 1 : 1;
-            setActivities(prev => [...prev, { ...draftActivity, id: newId }]);
+            setActivities(prev => [...prev, { ...draftActivity, id: newId, resident: residentLabel }]);
             resetToList();
             Alert.alert('Sucesso', 'Atividade criada com sucesso!');
         } catch (err) {
@@ -521,12 +598,40 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
         }
     };
 
-    const startEditing = () => { if (!selectedActivity) return; setDraftActivity({ ...selectedActivity }); setViewMode('editar'); };
+    const startEditing = async () => {
+        if (!selectedActivity) return;
+        try {
+            setLoadingActivities(true);
+            const ids = await buscarIdososDaAtividade(selectedActivity.id, token);
+            setSelectedIdosoIds(ids || []);
+        } catch (e) {
+            console.warn('[Agenda] Erro ao carregar idosos vinculados:', e);
+            setSelectedIdosoIds([]);
+        } finally {
+            setLoadingActivities(false);
+        }
+        setDraftActivity({ ...selectedActivity });
+        setViewMode('editar');
+    };
 
     const saveEditing = async () => {
         if (!draftActivity) return;
+        if (selectedIdosoIds.length === 0) {
+            Alert.alert('Atenção', 'Selecione pelo menos um residente.');
+            return;
+        }
         try {
             setLoadingActivities(true);
+
+            // Constrói os nomes correspondentes para o estado local
+            const nomes = idosos
+                .filter(i => selectedIdosoIds.includes(i.id))
+                .map(i => i.nome)
+                .join(', ');
+            
+            const selecionouTodos = idosos.length > 0 && selectedIdosoIds.length === idosos.length;
+            const residentLabel = selecionouTodos ? 'Todos os Residentes' : (nomes || 'Residentes (Geral)');
+
             if (token && token !== 'demo-token') {
                 const apiPayload = {
                     nome: draftActivity.title,
@@ -534,11 +639,13 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                     horario_inicio: `${draftActivity.time}:00`,
                     horario_fim: `${parseInt(draftActivity.time.split(':')[0]) + 1}:00:00`,
                     observacoes: draftActivity.notes,
-                    responsavelId: 2
+                    responsavelId: 2,
+                    status: draftActivity.status
                 };
                 await atualizarAtividade(draftActivity.id, apiPayload, token);
+                await atualizarAlocacoesAtividade(draftActivity.id, selectedIdosoIds, token);
             }
-            setActivities(prev => prev.map(a => a.id === draftActivity.id ? { ...a, ...draftActivity } : a));
+            setActivities(prev => prev.map(a => a.id === draftActivity.id ? { ...a, ...draftActivity, resident: residentLabel } : a));
             setViewMode('detalhe');
             Alert.alert('Sucesso', 'Atividade atualizada com sucesso!');
         } catch (err) {
@@ -673,7 +780,62 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                 </View>
                 <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
                     {renderEditField('Título', draftActivity.title, t => setDraftActivity(p => p ? { ...p, title: t } : p))}
-                    {renderEditField('Residente', draftActivity.resident, t => setDraftActivity(p => p ? { ...p, resident: t } : p))}
+                    
+                    {/* Seleção Múltipla de Residentes */}
+                    <View style={styles.fieldGroup}>
+                        <Text style={styles.fieldLabel}>Residentes Vinculados <Text style={{ color: '#EF4444' }}>*</Text></Text>
+                        
+                        {/* Opção Todos */}
+                        <TouchableOpacity 
+                            style={[
+                                styles.filterChip, 
+                                idosos.length > 0 && selectedIdosoIds.length === idosos.length && styles.filterChipActive,
+                                { marginBottom: 12, alignSelf: 'flex-start' }
+                            ]}
+                            onPress={() => {
+                                if (idosos.length > 0 && selectedIdosoIds.length === idosos.length) {
+                                    setSelectedIdosoIds([]);
+                                } else {
+                                    setSelectedIdosoIds(idosos.map(i => i.id));
+                                }
+                            }}
+                        >
+                            <Ionicons name="people" size={14} color={idosos.length > 0 && selectedIdosoIds.length === idosos.length ? '#FFFFFF' : '#6B7280'} style={{ marginRight: 6 }} />
+                            <Text style={[styles.filterChipText, idosos.length > 0 && selectedIdosoIds.length === idosos.length && styles.filterChipTextActive]}>
+                                Todos os Residentes
+                            </Text>
+                        </TouchableOpacity>
+
+                        {/* Chips de idosos ativos para seleção individual */}
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
+                            {idosos.map(i => {
+                                const selecionado = selectedIdosoIds.includes(i.id);
+                                return (
+                                    <TouchableOpacity
+                                        key={i.id}
+                                        style={[styles.filterChip, selecionado && styles.filterChipActive]}
+                                        onPress={() => {
+                                            if (selecionado) {
+                                                setSelectedIdosoIds(prev => prev.filter(id => id !== i.id));
+                                            } else {
+                                                setSelectedIdosoIds(prev => [...prev, i.id]);
+                                            }
+                                        }}
+                                    >
+                                        <Text style={[styles.filterChipText, selecionado && styles.filterChipTextActive]}>
+                                            {i.nome.replace(/^(Sr\.|Sra\.) /, '')}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
+                        {selectedIdosoIds.length === 0 && (
+                            <Text style={{ color: '#EF4444', fontSize: 11, marginTop: 4, fontWeight: '500' }}>
+                                * Selecione pelo menos um residente.
+                            </Text>
+                        )}
+                    </View>
+
                     {renderEditField('Horário', draftActivity.time, t => setDraftActivity(p => p ? { ...p, time: t } : p))}
                     {renderEditField('Local', draftActivity.location, t => setDraftActivity(p => p ? { ...p, location: t } : p))}
                     {renderEditField('Responsável', draftActivity.responsible, t => setDraftActivity(p => p ? { ...p, responsible: t } : p))}
@@ -822,7 +984,173 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                 </View>
             </Modal>
 
+            {/* Modal de Calendário Avançado */}
+            <Modal
+                visible={modalCalendarVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setModalCalendarVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setModalCalendarVisible(false)}
+                />
+                <View style={styles.modalSheet}>
+                    <View style={styles.modalHandle} />
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Filtrar Data da Agenda</Text>
+                        <TouchableOpacity onPress={() => setModalCalendarVisible(false)}>
+                            <Text style={styles.modalClear}>Fechar</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Seleção Rápida de Ano */}
+                    <Text style={styles.filterLabel}>Ano</Text>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
+                    >
+                        {yearsRange.map(y => (
+                            <TouchableOpacity
+                                key={y}
+                                style={[
+                                    styles.filterChip,
+                                    calendarYear === y && styles.filterChipActive
+                                ]}
+                                onPress={() => setCalendarYear(y)}
+                            >
+                                <Text
+                                    style={[
+                                        styles.filterChipText,
+                                        calendarYear === y && styles.filterChipTextActive
+                                    ]}
+                                >
+                                    {y}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    {/* Seleção Rápida de Mês */}
+                    <Text style={styles.filterLabel}>Mês</Text>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
+                    >
+                        {mesesList.map((m, idx) => (
+                            <TouchableOpacity
+                                key={m}
+                                style={[
+                                    styles.filterChip,
+                                    calendarMonth === idx && styles.filterChipActive
+                                ]}
+                                onPress={() => setCalendarMonth(idx)}
+                            >
+                                <Text
+                                    style={[
+                                        styles.filterChipText,
+                                        calendarMonth === idx && styles.filterChipTextActive
+                                    ]}
+                                >
+                                    {m.slice(0, 3)}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    {/* Grade de Dias do Mês */}
+                    <View style={styles.calendarContainer}>
+                        {/* Cabeçalho dos dias da semana */}
+                        <View style={styles.calendarWeekdaysRow}>
+                            {diasSemana.map(d => (
+                                <Text key={d} style={styles.calendarWeekdayText}>
+                                    {d}
+                                </Text>
+                            ))}
+                        </View>
+
+                        {/* Grade de dias */}
+                        <View style={styles.calendarDaysGrid}>
+                            {(() => {
+                                const daysInMonth = getDaysInMonth(calendarMonth, calendarYear);
+                                const firstDay = getFirstDayOfMonth(calendarMonth, calendarYear);
+                                const gridItems = [];
+                                
+                                // Padding de dias do mês anterior
+                                for (let i = 0; i < firstDay; i++) {
+                                    gridItems.push(<View key={`empty-${i}`} style={styles.calendarDayCellEmpty} />);
+                                }
+                                
+                                // Dias reais
+                                for (let d = 1; d <= daysInMonth; d++) {
+                                    const isSelected = selectedDate.getDate() === d &&
+                                                       selectedDate.getMonth() === calendarMonth &&
+                                                       selectedDate.getFullYear() === calendarYear;
+                                    
+                                    const todayObj = new Date();
+                                    const isToday = todayObj.getDate() === d &&
+                                                    todayObj.getMonth() === calendarMonth &&
+                                                    todayObj.getFullYear() === calendarYear;
+                                    
+                                    gridItems.push(
+                                        <TouchableOpacity
+                                            key={`day-${d}`}
+                                            style={[
+                                                styles.calendarDayCell,
+                                                isSelected && styles.calendarDayCellSelected,
+                                                isToday && !isSelected && styles.calendarDayCellToday
+                                            ]}
+                                            onPress={() => {
+                                                const newD = new Date(calendarYear, calendarMonth, d);
+                                                setSelectedDate(newD);
+                                                setModalCalendarVisible(false);
+                                            }}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.calendarDayText,
+                                                    isSelected && styles.calendarDayTextSelected,
+                                                    isToday && !isSelected && styles.calendarDayTextToday
+                                                ]}
+                                            >
+                                                {d}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                }
+                                return gridItems;
+                            })()}
+                        </View>
+                    </View>
+
+                    {/* Atalhos Rápidos no Rodapé */}
+                    <Text style={styles.filterLabel}>Atalhos Rápidos</Text>
+                    <View style={styles.presetsRow}>
+                        <TouchableOpacity style={styles.presetBtn} onPress={() => handleQuickPreset('hoje')}>
+                            <Ionicons name="today-outline" size={13} color="#202c4b" style={{ marginRight: 4 }} />
+                            <Text style={styles.presetBtnText}>Hoje</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.presetBtn} onPress={() => handleQuickPreset('amanha')}>
+                            <Ionicons name="play-forward-outline" size={13} color="#202c4b" style={{ marginRight: 4 }} />
+                            <Text style={styles.presetBtnText}>Amanhã</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.presetBtn} onPress={() => handleQuickPreset('semana')}>
+                            <Ionicons name="calendar-outline" size={13} color="#202c4b" style={{ marginRight: 4 }} />
+                            <Text style={styles.presetBtnText}>+7 Dias</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.presetBtn} onPress={() => handleQuickPreset('mes')}>
+                            <Ionicons name="arrow-forward-outline" size={13} color="#202c4b" style={{ marginRight: 4 }} />
+                            <Text style={styles.presetBtnText}>+1 Mês</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
             {/* Modal de Edição de Cardápio para Admins */}
+
             <Modal
                 visible={modalCardapioVisible}
                 transparent
@@ -896,7 +1224,13 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                     <TouchableOpacity onPress={() => setSelectedDate(d => shiftDate(d, -1))} style={styles.dateNavBtn}>
                         <Ionicons name="chevron-back" size={20} color="#6B7280" />
                     </TouchableOpacity>
-                    <Text style={styles.dateLabel}>{formatDayLabel(selectedDate)}</Text>
+                    
+                    <TouchableOpacity onPress={openCalendar} style={styles.dateLabelContainer} activeOpacity={0.7}>
+                        <Ionicons name="calendar-outline" size={16} color="#202c4b" style={{ marginRight: 6 }} />
+                        <Text style={styles.dateLabelText}>{formatDayLabel(selectedDate)}</Text>
+                        <Ionicons name="chevron-down" size={12} color="#6B7280" style={{ marginLeft: 4 }} />
+                    </TouchableOpacity>
+
                     <TouchableOpacity onPress={() => setSelectedDate(d => shiftDate(d, 1))} style={styles.dateNavBtn}>
                         <Ionicons name="chevron-forward" size={20} color="#6B7280" />
                     </TouchableOpacity>
@@ -926,7 +1260,12 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                         )}
 
                         {/* Atividades por período */}
-                        {activitiesForDay.length === 0 ? (
+                        {loadingActivities ? (
+                            <View style={{ paddingVertical: 60, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                                <ActivityIndicator size="large" color="#202c4b" />
+                                <Text style={{ color: '#9CA3AF', fontSize: 14, fontWeight: '500' }}>Carregando atividades...</Text>
+                            </View>
+                        ) : activitiesForDay.length === 0 ? (
                             <View style={styles.emptyState}>
                                 <Ionicons name="calendar-outline" size={48} color="#D1D5DB" />
                                 <Text style={styles.emptyText}>{temFiltros ? 'Nenhuma atividade com esses filtros' : 'Nenhuma atividade para este dia'}</Text>
@@ -1033,7 +1372,27 @@ const styles = StyleSheet.create({
     addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },
     dateNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 },
     dateNavBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 1 },
-    dateLabel: { flex: 1, textAlign: 'center', fontSize: 14, fontWeight: '600', color: '#1F2937', marginHorizontal: 8 },
+    dateLabelContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        marginHorizontal: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
+        elevation: 1
+    },
+    dateLabelText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#1F2937'
+    },
     
     // Abas de Agenda (Atividades / Cardápio) - INTEGRADO PREMIUM NO TOPO
     segmentContainer: { 
@@ -1219,5 +1578,86 @@ const styles = StyleSheet.create({
         color: '#DC2626',
         fontSize: 14,
         fontWeight: '700',
+    },
+    calendarContainer: {
+        marginTop: 16,
+        backgroundColor: '#F8FAFC',
+        borderRadius: 16,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#F1F5F9'
+    },
+    calendarWeekdaysRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        paddingBottom: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E2E8F0'
+    },
+    calendarWeekdayText: {
+        width: '14%',
+        textAlign: 'center',
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#94A3B8'
+    },
+    calendarDaysGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 8
+    },
+    calendarDayCell: {
+        width: '14%',
+        aspectRatio: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: 2,
+        borderRadius: 20
+    },
+    calendarDayCellEmpty: {
+        width: '14%',
+        aspectRatio: 1
+    },
+    calendarDayCellSelected: {
+        backgroundColor: '#202c4b'
+    },
+    calendarDayCellToday: {
+        borderWidth: 1,
+        borderColor: '#202c4b'
+    },
+    calendarDayText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#334155'
+    },
+    calendarDayTextSelected: {
+        color: '#FFFFFF',
+        fontWeight: '700'
+    },
+    calendarDayTextToday: {
+        color: '#202c4b',
+        fontWeight: '700'
+    },
+    presetsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 12,
+        gap: 6
+    },
+    presetBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F1F5F9',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        borderRadius: 10,
+        paddingVertical: 8
+    },
+    presetBtnText: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: '#202c4b'
     },
 });
