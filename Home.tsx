@@ -10,6 +10,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { login } from './src/services/api';
@@ -72,7 +73,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
         {/* Logo */}
         <View style={styles.logoContainer}>
           <View style={styles.logo}>
-            <Ionicons name="heart-circle" size={48} color="#202c4b" />
+            <Image
+              source={require('./assets/logoAssist.png')}
+              style={{ width: 75, height: 75 }}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.logoText}>AssistConnect</Text>
         </View>
