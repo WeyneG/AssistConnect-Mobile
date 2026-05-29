@@ -14,7 +14,11 @@ import {
     buscarAtividades,
     Atividade,
     criarAtividade,
-    atualizarAtividade
+    atualizarAtividade,
+    buscarIdosos,
+    buscarIdososDaAtividade,
+    atualizarAlocacoesAtividade,
+    Idoso
 } from '../services/api';
 
 type Periodo = 'manhã' | 'tarde' | 'noite';
@@ -274,6 +278,22 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
     const [activities, setActivities] = useState<Activity[]>(createDemoActivities());
     const [draftActivity, setDraftActivity] = useState<Activity | null>(null);
 
+    const [idosos, setIdosos] = useState<Idoso[]>([]);
+    const [selectedIdosoIds, setSelectedIdosoIds] = useState<number[]>([]);
+
+    // Carregar lista de residentes ativos
+    useEffect(() => {
+        const carregarIdosos = async () => {
+            try {
+                const data = await buscarIdosos(token, 0, 1000); // busca todos
+                setIdosos(data || []);
+            } catch (err) {
+                console.warn('[Agenda] Erro ao buscar idosos:', err);
+            }
+        };
+        carregarIdosos();
+    }, [token]);
+
     // Estados de Integração
     const [activeTab, setActiveTab] = useState<'atividades' | 'cardapio'>(initialTab);
     const [cardapio, setCardapio] = useState<ItemCardapio[]>([]);
@@ -491,14 +511,29 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
     const openDetails = (activity: Activity) => { setSelectedActivityId(activity.id); setViewMode('detalhe'); };
 
     const startCreating = () => {
+        setSelectedIdosoIds([]);
         setDraftActivity({ id: 0, date: selectedDateKey, period: 'manhã', time: '', title: '', resident: '', status: 'pendente', location: '', notes: '', responsible: '' });
         setViewMode('criar');
     };
 
     const saveNewActivity = async () => {
         if (!draftActivity || !draftActivity.title.trim()) return;
+        if (selectedIdosoIds.length === 0) {
+            Alert.alert('Atenção', 'Selecione pelo menos um residente para vincular à atividade.');
+            return;
+        }
         try {
             setLoadingActivities(true);
+            
+            // Constrói os nomes correspondentes para o estado local
+            const nomes = idosos
+                .filter(i => selectedIdosoIds.includes(i.id))
+                .map(i => i.nome)
+                .join(', ');
+            
+            const selecionouTodos = idosos.length > 0 && selectedIdosoIds.length === idosos.length;
+            const residentLabel = selecionouTodos ? 'Todos os Residentes' : (nomes || 'Residentes (Geral)');
+
             if (token && token !== 'demo-token') {
                 const apiPayload = {
                     nome: draftActivity.title,
@@ -508,10 +543,10 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                     observacoes: draftActivity.notes,
                     responsavelId: 2
                 };
-                await criarAtividade(apiPayload, undefined, token);
+                await criarAtividade(apiPayload, selectedIdosoIds, token);
             }
             const newId = activities.length > 0 ? Math.max(...activities.map(a => a.id)) + 1 : 1;
-            setActivities(prev => [...prev, { ...draftActivity, id: newId }]);
+            setActivities(prev => [...prev, { ...draftActivity, id: newId, resident: residentLabel }]);
             resetToList();
             Alert.alert('Sucesso', 'Atividade criada com sucesso!');
         } catch (err) {
@@ -521,12 +556,40 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
         }
     };
 
-    const startEditing = () => { if (!selectedActivity) return; setDraftActivity({ ...selectedActivity }); setViewMode('editar'); };
+    const startEditing = async () => {
+        if (!selectedActivity) return;
+        try {
+            setLoadingActivities(true);
+            const ids = await buscarIdososDaAtividade(selectedActivity.id, token);
+            setSelectedIdosoIds(ids || []);
+        } catch (e) {
+            console.warn('[Agenda] Erro ao carregar idosos vinculados:', e);
+            setSelectedIdosoIds([]);
+        } finally {
+            setLoadingActivities(false);
+        }
+        setDraftActivity({ ...selectedActivity });
+        setViewMode('editar');
+    };
 
     const saveEditing = async () => {
         if (!draftActivity) return;
+        if (selectedIdosoIds.length === 0) {
+            Alert.alert('Atenção', 'Selecione pelo menos um residente.');
+            return;
+        }
         try {
             setLoadingActivities(true);
+
+            // Constrói os nomes correspondentes para o estado local
+            const nomes = idosos
+                .filter(i => selectedIdosoIds.includes(i.id))
+                .map(i => i.nome)
+                .join(', ');
+            
+            const selecionouTodos = idosos.length > 0 && selectedIdosoIds.length === idosos.length;
+            const residentLabel = selecionouTodos ? 'Todos os Residentes' : (nomes || 'Residentes (Geral)');
+
             if (token && token !== 'demo-token') {
                 const apiPayload = {
                     nome: draftActivity.title,
@@ -537,8 +600,9 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                     responsavelId: 2
                 };
                 await atualizarAtividade(draftActivity.id, apiPayload, token);
+                await atualizarAlocacoesAtividade(draftActivity.id, selectedIdosoIds, token);
             }
-            setActivities(prev => prev.map(a => a.id === draftActivity.id ? { ...a, ...draftActivity } : a));
+            setActivities(prev => prev.map(a => a.id === draftActivity.id ? { ...a, ...draftActivity, resident: residentLabel } : a));
             setViewMode('detalhe');
             Alert.alert('Sucesso', 'Atividade atualizada com sucesso!');
         } catch (err) {
@@ -673,7 +737,62 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                 </View>
                 <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
                     {renderEditField('Título', draftActivity.title, t => setDraftActivity(p => p ? { ...p, title: t } : p))}
-                    {renderEditField('Residente', draftActivity.resident, t => setDraftActivity(p => p ? { ...p, resident: t } : p))}
+                    
+                    {/* Seleção Múltipla de Residentes */}
+                    <View style={styles.fieldGroup}>
+                        <Text style={styles.fieldLabel}>Residentes Vinculados <Text style={{ color: '#EF4444' }}>*</Text></Text>
+                        
+                        {/* Opção Todos */}
+                        <TouchableOpacity 
+                            style={[
+                                styles.filterChip, 
+                                idosos.length > 0 && selectedIdosoIds.length === idosos.length && styles.filterChipActive,
+                                { marginBottom: 12, alignSelf: 'flex-start' }
+                            ]}
+                            onPress={() => {
+                                if (idosos.length > 0 && selectedIdosoIds.length === idosos.length) {
+                                    setSelectedIdosoIds([]);
+                                } else {
+                                    setSelectedIdosoIds(idosos.map(i => i.id));
+                                }
+                            }}
+                        >
+                            <Ionicons name="people" size={14} color={idosos.length > 0 && selectedIdosoIds.length === idosos.length ? '#FFFFFF' : '#6B7280'} style={{ marginRight: 6 }} />
+                            <Text style={[styles.filterChipText, idosos.length > 0 && selectedIdosoIds.length === idosos.length && styles.filterChipTextActive]}>
+                                Todos os Residentes
+                            </Text>
+                        </TouchableOpacity>
+
+                        {/* Chips de idosos ativos para seleção individual */}
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
+                            {idosos.map(i => {
+                                const selecionado = selectedIdosoIds.includes(i.id);
+                                return (
+                                    <TouchableOpacity
+                                        key={i.id}
+                                        style={[styles.filterChip, selecionado && styles.filterChipActive]}
+                                        onPress={() => {
+                                            if (selecionado) {
+                                                setSelectedIdosoIds(prev => prev.filter(id => id !== i.id));
+                                            } else {
+                                                setSelectedIdosoIds(prev => [...prev, i.id]);
+                                            }
+                                        }}
+                                    >
+                                        <Text style={[styles.filterChipText, selecionado && styles.filterChipTextActive]}>
+                                            {i.nome.replace(/^(Sr\.|Sra\.) /, '')}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
+                        {selectedIdosoIds.length === 0 && (
+                            <Text style={{ color: '#EF4444', fontSize: 11, marginTop: 4, fontWeight: '500' }}>
+                                * Selecione pelo menos um residente.
+                            </Text>
+                        )}
+                    </View>
+
                     {renderEditField('Horário', draftActivity.time, t => setDraftActivity(p => p ? { ...p, time: t } : p))}
                     {renderEditField('Local', draftActivity.location, t => setDraftActivity(p => p ? { ...p, location: t } : p))}
                     {renderEditField('Responsável', draftActivity.responsible, t => setDraftActivity(p => p ? { ...p, responsible: t } : p))}
