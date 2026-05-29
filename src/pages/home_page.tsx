@@ -331,7 +331,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                                             <View style={styles.idosoAvatar}>
                                                 {fotoUri ? (
                                                     <Image
-                                                        source={{ uri: fotoUri + '?t=' + Date.now() }}
+                                                        source={{ uri: fotoUri }}
                                                         style={{ width: 56, height: 56, borderRadius: 28 }}
                                                     />
                                                 ) : (
@@ -451,7 +451,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                                         <View style={styles.modalAvatar}>
                                             {fotoUri ? (
                                                 <Image
-                                                    source={{ uri: fotoUri + '?t=' + Date.now() }}
+                                                    source={{ uri: fotoUri }}
                                                     style={{ width: 40, height: 40, borderRadius: 20 }}
                                                 />
                                             ) : (

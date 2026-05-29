@@ -11,9 +11,10 @@ import {
     TextInput,
     FlatList,
     Modal,
+    Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { buscarIdosos, buscarResumo, Idoso } from '../services/api';
+import { buscarIdosos, buscarResumo, Idoso, getFotoUri } from '../services/api';
 import { PerfilIdosoPage } from './perfil_idoso_page';
 import { BottomTabBar } from '../components/BottomTabBar';
 
@@ -356,47 +357,57 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, userRole,
             <FlatList
                 data={filteredIdosos}
                 keyExtractor={item => item.id.toString()}
-                renderItem={({ item }) => (
-                    <TouchableOpacity
-                        style={styles.idosoCard}
-                        onPress={() => handleVerDetalhes(item)}
-                        activeOpacity={0.7}
-                    >
-                        {/* Avatar */}
-                        <View style={styles.cardAvatar}>
-                            <Ionicons name="person" size={20} color="#202c4b" />
-                        </View>
+                renderItem={({ item }) => {
+                    const fotoUri = getFotoUri(item.fotoUrl);
+                    return (
+                        <TouchableOpacity
+                            style={styles.idosoCard}
+                            onPress={() => handleVerDetalhes(item)}
+                            activeOpacity={0.7}
+                        >
+                            {/* Avatar */}
+                            <View style={styles.cardAvatar}>
+                                {fotoUri ? (
+                                    <Image
+                                        source={{ uri: fotoUri }}
+                                        style={{ width: 48, height: 48, borderRadius: 24 }}
+                                    />
+                                ) : (
+                                    <Ionicons name="person" size={20} color="#202c4b" />
+                                )}
+                            </View>
 
-                        {/* Informações */}
-                        <View style={styles.cardInfo}>
-                            <Text style={styles.cardNome}>{item.nome}</Text>
-                            <View style={styles.cardMeta}>
-                                <View style={styles.metaItem}>
-                                    <Ionicons name="home-outline" size={12} color="#9CA3AF" />
-                                    <Text style={styles.metaText}>Quarto {item.quarto}</Text>
-                                </View>
-                                <View style={styles.metaSeparator} />
-                                <View style={styles.metaItem}>
-                                    <Ionicons name="calendar-outline" size={12} color="#9CA3AF" />
-                                    <Text style={styles.metaText}>{item.idade}a</Text>
+                            {/* Informações */}
+                            <View style={styles.cardInfo}>
+                                <Text style={styles.cardNome}>{item.nome}</Text>
+                                <View style={styles.cardMeta}>
+                                    <View style={styles.metaItem}>
+                                        <Ionicons name="home-outline" size={12} color="#9CA3AF" />
+                                        <Text style={styles.metaText}>Quarto {item.quarto}</Text>
+                                    </View>
+                                    <View style={styles.metaSeparator} />
+                                    <View style={styles.metaItem}>
+                                        <Ionicons name="calendar-outline" size={12} color="#9CA3AF" />
+                                        <Text style={styles.metaText}>{item.idade}a</Text>
+                                    </View>
                                 </View>
                             </View>
-                        </View>
 
-                        {/* Status Badge */}
-                        <View style={[styles.statusBadge, item.status === 'ativo' ? styles.statusAtivo : styles.statusInativo]}>
-                            <View style={[styles.statusDot, item.status === 'ativo' ? styles.statusDotAtivo : styles.statusDotInativo]} />
-                            <Text style={[styles.statusText, item.status === 'ativo' ? styles.statusTextAtivo : styles.statusTextInativo]}>
-                                {item.status === 'ativo' ? 'Ativo' : 'Inativo'}
-                            </Text>
-                        </View>
+                            {/* Status Badge */}
+                            <View style={[styles.statusBadge, item.status === 'ativo' ? styles.statusAtivo : styles.statusInativo]}>
+                                <View style={[styles.statusDot, item.status === 'ativo' ? styles.statusDotAtivo : styles.statusDotInativo]} />
+                                <Text style={[styles.statusText, item.status === 'ativo' ? styles.statusTextAtivo : styles.statusTextInativo]}>
+                                    {item.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                                </Text>
+                            </View>
 
-                        {/* Chevron */}
-                        <View style={styles.chevronButton}>
-                            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
-                        </View>
-                    </TouchableOpacity>
-                )}
+                            {/* Chevron */}
+                            <View style={styles.chevronButton}>
+                                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                            </View>
+                        </TouchableOpacity>
+                    );
+                }}
                 contentContainerStyle={styles.listContent}
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
