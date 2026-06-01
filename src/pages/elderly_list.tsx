@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
     View,
     Text,
@@ -31,6 +31,20 @@ type ViewMode = 'list' | 'profile';
 export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, userRole, onBack, onNavigateTab, activeTab = 'elderly' }) => {
     const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [selectedIdosoId, setSelectedIdosoId] = useState<number | null>(null);
+
+    const visibleTabs = useMemo(() => {
+        const bottomTabs = [
+            { key: 'home', label: 'Home', activeIcon: 'home' as const, inactiveIcon: 'home-outline' as const },
+            { key: 'elderly', label: 'Idosos', activeIcon: 'people' as const, inactiveIcon: 'people-outline' as const },
+            { key: 'agenda', label: 'Agenda', activeIcon: 'calendar' as const, inactiveIcon: 'calendar-outline' as const },
+            { key: 'reports', label: 'Relatórios', activeIcon: 'bar-chart' as const, inactiveIcon: 'bar-chart-outline' as const },
+            { key: 'profile', label: 'Perfil', activeIcon: 'person' as const, inactiveIcon: 'person-outline' as const },
+        ];
+        if (userRole?.toLowerCase() === 'familiar') {
+            return bottomTabs.filter(tab => tab.key !== 'reports');
+        }
+        return bottomTabs;
+    }, [userRole]);
 
     // Listagem
     const [todosIdosos, setTodosIdosos] = useState<Idoso[]>([]);
@@ -485,13 +499,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, userRole,
                     onBack();
                     onNavigateTab?.(tab);
                 }}
-                tabs={[
-                    { key: 'home', label: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
-                    { key: 'elderly', label: 'Idosos', activeIcon: 'people', inactiveIcon: 'people-outline' },
-                    { key: 'agenda', label: 'Agenda', activeIcon: 'calendar', inactiveIcon: 'calendar-outline' },
-                    { key: 'reports', label: 'Relatórios', activeIcon: 'bar-chart', inactiveIcon: 'bar-chart-outline' },
-                    { key: 'profile', label: 'Perfil', activeIcon: 'person', inactiveIcon: 'person-outline' },
-                ]}
+                tabs={visibleTabs}
             />
         </View >
     );

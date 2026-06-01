@@ -626,10 +626,12 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, userRo
                         )}
 
                         {/* Botão de Emergência */}
-                        <TouchableOpacity style={[styles.emergencyButton, { marginTop: isAllowedToEdit ? 12 : 25 }]} activeOpacity={0.8}>
-                            <Ionicons name="warning" size={20} color="#FFF" />
-                            <Text style={styles.emergencyButtonText}>Registrar Ocorrência</Text>
-                        </TouchableOpacity>
+                        {isAllowedToEdit && (
+                            <TouchableOpacity style={[styles.emergencyButton, { marginTop: 12 }]} activeOpacity={0.8}>
+                                <Ionicons name="warning" size={20} color="#FFF" />
+                                <Text style={styles.emergencyButtonText}>Registrar Ocorrência</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 )}
 
