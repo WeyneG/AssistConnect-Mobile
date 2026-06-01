@@ -42,29 +42,40 @@ const bottomTabs: Array<{
     ];
 
 // ─── Tela de Perfil simples ───────────────────────────────────────────────────
-const PerfilTab: React.FC<{ onLogout: () => void; onNavigateTab: (tab: string) => void; activeTab: string }> = ({ onLogout, onNavigateTab, activeTab }) => (
-    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-        <View style={{ backgroundColor: '#202c4b', paddingTop: 50, paddingBottom: 24, paddingHorizontal: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}>
-            <Text style={{ fontSize: 28, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5 }}>Perfil</Text>
-        </View>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
-            <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                <Ionicons name="person" size={48} color="#202c4b" />
+const PerfilTab: React.FC<{ onLogout: () => void; onNavigateTab: (tab: string) => void; activeTab: string; tabs: typeof bottomTabs; userRole?: string }> = ({ onLogout, onNavigateTab, activeTab, tabs, userRole }) => {
+    const roleLabel = useMemo(() => {
+        if (!userRole) return 'Cuidador';
+        const role = userRole.toLowerCase();
+        if (role === 'familiar') return 'Familiar';
+        if (role === 'funcionario') return 'Funcionário';
+        if (role === 'admin') return 'Administrador';
+        return userRole.charAt(0).toUpperCase() + userRole.slice(1).toLowerCase();
+    }, [userRole]);
+
+    return (
+        <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+            <View style={{ backgroundColor: '#202c4b', paddingTop: 50, paddingBottom: 24, paddingHorizontal: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}>
+                <Text style={{ fontSize: 28, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.5 }}>Perfil</Text>
             </View>
-            <Text style={{ fontSize: 20, fontWeight: '700', color: '#1F2937', marginBottom: 4 }}>Cuidador</Text>
-            <Text style={{ fontSize: 14, color: '#6B7280', marginBottom: 32 }}>AssistConnect</Text>
-            <TouchableOpacity onPress={onLogout} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEE2E2', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}>
-                <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-                <Text style={{ fontSize: 15, fontWeight: '600', color: '#EF4444' }}>Sair</Text>
-            </TouchableOpacity>
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+                <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                    <Ionicons name="person" size={48} color="#202c4b" />
+                </View>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: '#1F2937', marginBottom: 4 }}>{roleLabel}</Text>
+                <Text style={{ fontSize: 14, color: '#6B7280', marginBottom: 32 }}>AssistConnect</Text>
+                <TouchableOpacity onPress={onLogout} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEE2E2', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}>
+                    <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#EF4444' }}>Sair</Text>
+                </TouchableOpacity>
+            </View>
+            <BottomTabBar
+                activeTab={activeTab}
+                onTabPress={onNavigateTab}
+                tabs={tabs}
+            />
         </View>
-        <BottomTabBar
-            activeTab={activeTab}
-            onTabPress={onNavigateTab}
-            tabs={bottomTabs}
-        />
-    </View>
-);
+    );
+};
 
 export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, onVerPerfil }) => {
     const [currentPage, setCurrentPage] = useState<NavigationPage>('home');
@@ -83,6 +94,22 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
             return isAscending ? comparison : -comparison;
         });
     }, [idosos, isAscending]);
+
+    const visibleTabs = useMemo(() => {
+        if (userRole?.toLowerCase() === 'familiar') {
+            return bottomTabs.filter(tab => tab.key !== 'reports');
+        }
+        return bottomTabs;
+    }, [userRole]);
+
+    const greetingLabel = useMemo(() => {
+        if (!userRole) return 'Cuidador';
+        const role = userRole.toLowerCase();
+        if (role === 'familiar') return 'Familiar';
+        if (role === 'funcionario') return 'Funcionário';
+        if (role === 'admin') return 'Administrador';
+        return userRole.charAt(0).toUpperCase() + userRole.slice(1).toLowerCase();
+    }, [userRole]);
 
     useEffect(() => {
         carregarDados();
@@ -140,7 +167,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                         if (tab === 'agenda') setAgendaTab('atividades');
                         setCurrentPage(tab as NavigationPage);
                     }}
-                    tabs={bottomTabs}
+                    tabs={visibleTabs}
                 />
             </View>
         );
@@ -164,7 +191,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                         if (tab === 'agenda') setAgendaTab('atividades');
                         setCurrentPage(tab as NavigationPage);
                     }}
-                    tabs={bottomTabs}
+                    tabs={visibleTabs}
                 />
             </View>
         );
@@ -180,6 +207,8 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                     setCurrentPage(tab as NavigationPage);
                 }}
                 activeTab={currentPage}
+                tabs={visibleTabs}
+                userRole={userRole}
             />
         );
     }
@@ -190,7 +219,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
             <View style={styles.header}>
                 <View style={styles.headerContent}>
                     <View>
-                        <Text style={styles.greeting}>Olá, Cuidador 👋</Text>
+                        <Text style={styles.greeting}>Olá, {greetingLabel} 👋</Text>
                         <Text style={styles.headerTitle}>AssistConnect</Text>
                     </View>
                     <TouchableOpacity onPress={onLogout} style={styles.logoutButton}>
@@ -276,13 +305,15 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                                 <Text style={styles.quickAccessSubtitle}>Controle diário</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity style={styles.quickAccessCard} onPress={() => setCurrentPage('reports')} activeOpacity={0.8}>
-                                <View style={[styles.quickAccessIcon, { backgroundColor: '#E0E7FF' }]}>
-                                    <Ionicons name="bar-chart" size={24} color="#6366F1" />
-                                </View>
-                                <Text style={styles.quickAccessTitle}>Relatórios</Text>
-                                <Text style={styles.quickAccessSubtitle}>Análises</Text>
-                            </TouchableOpacity>
+                            {userRole?.toLowerCase() !== 'familiar' && (
+                                <TouchableOpacity style={styles.quickAccessCard} onPress={() => setCurrentPage('reports')} activeOpacity={0.8}>
+                                    <View style={[styles.quickAccessIcon, { backgroundColor: '#E0E7FF' }]}>
+                                        <Ionicons name="bar-chart" size={24} color="#6366F1" />
+                                    </View>
+                                    <Text style={styles.quickAccessTitle}>Relatórios</Text>
+                                    <Text style={styles.quickAccessSubtitle}>Análises</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
 
                         {/* Lista de Idosos */}
@@ -479,7 +510,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                     if (tab === 'agenda') setAgendaTab('atividades');
                     setCurrentPage(tab as NavigationPage);
                 }}
-                tabs={bottomTabs}
+                tabs={visibleTabs}
             />
         </View>
     );
