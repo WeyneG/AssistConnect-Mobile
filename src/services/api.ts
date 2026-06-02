@@ -597,7 +597,7 @@ export const buscarTodosCardapios = async (token?: string): Promise<any[]> => {
 
 export const getFotoUri = (path?: string | null): string | null => {
     if (!path) return null;
-    if (path.startsWith('http')) return path;
+    if (path.startsWith('http') || path.startsWith('data:')) return path;
 
     const base = API_BASE_URL.replace('/api', '');
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
