@@ -822,7 +822,7 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                         {renderStatusChip(activity.status)}
                     </View>
                     <Text style={styles.activityResident}>{activity.resident}</Text>
-                    <Text style={styles.activityMeta}>{activity.location} • {activity.responsible}</Text>
+                    <Text style={styles.activityMeta}>{activity.responsible}</Text>
                 </View>
             </TouchableOpacity>
         );
@@ -857,7 +857,6 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                         {renderStatusChip(selectedActivity.status)}
                         <View style={styles.detailDivider} />
                         <View style={styles.detailRow}><Ionicons name="person-outline" size={16} color="#9CA3AF" /><Text style={styles.detailRowText}>{selectedActivity.resident}</Text></View>
-                        <View style={styles.detailRow}><Ionicons name="location-outline" size={16} color="#9CA3AF" /><Text style={styles.detailRowText}>{selectedActivity.location}</Text></View>
                         <View style={styles.detailRow}><Ionicons name="shield-checkmark-outline" size={16} color="#9CA3AF" /><Text style={styles.detailRowText}>{selectedActivity.responsible}</Text></View>
                         {selectedActivity.notes ? (
                             <View style={styles.detailNotes}>
@@ -1013,7 +1012,6 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                     </View>
 
                     {renderEditField('Horário', draftActivity.time, handleTimeChange, false, true, 'numeric')}
-                    {renderEditField('Local', draftActivity.location, t => setDraftActivity(p => p ? { ...p, location: t } : p))}
                     {renderEditField('Responsável', draftActivity.responsible, t => setDraftActivity(p => p ? { ...p, responsible: t } : p))}
                     {renderEditField('Observações', draftActivity.notes, t => setDraftActivity(p => p ? { ...p, notes: t } : p), true)}
                     <View style={styles.fieldGroup}>
@@ -1660,7 +1658,7 @@ const styles = StyleSheet.create({
     periodCount: { fontSize: 13, fontWeight: '700' },
     activityCard: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 14, marginBottom: 10, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
     activityAccent: { width: 4 },
-    activityTimeColumn: { alignItems: 'center', paddingVertical: 14, paddingHorizontal: 10, width: 52 },
+    activityTimeColumn: { alignItems: 'center', paddingVertical: 14, paddingHorizontal: 6, width: 60 },
     activityTime: { fontSize: 12, fontWeight: '700', color: '#374151' },
     activityTimeLine: { flex: 1, width: 1, backgroundColor: '#E5E7EB', marginTop: 4 },
     activityContent: { flex: 1, paddingVertical: 12, paddingRight: 14 },

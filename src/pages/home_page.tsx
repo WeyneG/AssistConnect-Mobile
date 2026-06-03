@@ -259,7 +259,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                             <View style={styles.statsContainer}>
                                 <View style={styles.statCard}>
                                     <View style={styles.statIconContainer}>
-                                        <Ionicons name="people" size={18} color="#202c4b" />
+                                        <Ionicons name="people" size={14} color="#202c4b" />
                                     </View>
                                     <View style={styles.statInfo}>
                                         <Text style={styles.statNumber}>{resumo.total}</Text>
@@ -268,7 +268,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                                 </View>
                                 <View style={styles.statCard}>
                                     <View style={[styles.statIconContainer, { backgroundColor: '#ECFDF5' }]}>
-                                        <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+                                        <Ionicons name="checkmark-circle" size={14} color="#10B981" />
                                     </View>
                                     <View style={styles.statInfo}>
                                         <Text style={styles.statNumber}>{resumo.ativos}</Text>
@@ -277,7 +277,7 @@ export const HomePage: React.FC<HomePageProps> = ({ token, userRole, onLogout, o
                                 </View>
                                 <View style={styles.statCard}>
                                     <View style={[styles.statIconContainer, { backgroundColor: '#FEF3E7' }]}>
-                                        <Ionicons name="pause-circle" size={18} color="#F59E0B" />
+                                        <Ionicons name="pause-circle" size={14} color="#F59E0B" />
                                     </View>
                                     <View style={styles.statInfo}>
                                         <Text style={styles.statNumber}>{resumo.inativos}</Text>
@@ -543,23 +543,23 @@ const styles = StyleSheet.create({
     errorMessage: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 },
     retryButton: { marginTop: 24, backgroundColor: '#202c4b', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12 },
     retryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-    statsContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 8 },
+    statsContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 6 },
     statCard: {
         flex: 1,
         backgroundColor: '#F9FAFB',
         borderRadius: 12,
-        padding: 10,
-        paddingVertical: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 4,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
+        gap: 6,
         borderWidth: 1,
         borderColor: '#E5E7EB',
     },
     statIconContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
+        width: 28,
+        height: 28,
+        borderRadius: 8,
         backgroundColor: '#EEF2FF',
         alignItems: 'center',
         justifyContent: 'center',
@@ -573,13 +573,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         paddingHorizontal: 20,
         marginTop: 20,
-        gap: 12
+        gap: 6
     },
     quickAccessCard: {
         flex: 1,
         backgroundColor: '#FFFFFF',
         borderRadius: 20,
-        padding: 18,
+        paddingVertical: 14,
+        paddingHorizontal: 4,
         alignItems: 'center',
         shadowColor: '#202c4b',
         shadowOffset: { width: 0, height: 4 },
@@ -590,12 +591,12 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(130, 151, 217, 0.1)',
     },
     quickAccessIcon: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 12,
+        marginBottom: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -603,17 +604,19 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     quickAccessTitle: {
-        fontSize: 15,
+        fontSize: 11,
         fontWeight: '700',
         color: '#1F2937',
         marginBottom: 4,
         textAlign: 'center',
+        width: '100%',
     },
     quickAccessSubtitle: {
-        fontSize: 11,
+        fontSize: 10,
         color: '#6B7280',
         textAlign: 'center',
         fontWeight: '500',
+        width: '100%',
     },
     section: { paddingHorizontal: 20, marginTop: 32 },
     sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
