@@ -569,6 +569,18 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
 
     const openDetails = (activity: Activity) => { setSelectedActivityId(activity.id); setViewMode('detalhe'); };
 
+    const handleTimeChange = (text: string) => {
+        const cleaned = text.replace(/\D/g, '');
+        let formatted = cleaned;
+        if (cleaned.length > 4) {
+            formatted = cleaned.slice(0, 4);
+        }
+        if (formatted.length > 2) {
+            formatted = `${formatted.slice(0, 2)}:${formatted.slice(2)}`;
+        }
+        setDraftActivity(p => p ? { ...p, time: formatted } : p);
+    };
+
     const startCreating = () => {
         setSelectedIdosoIds([]);
         setDraftActivity({ id: 0, date: selectedDateKey, period: 'manhã', time: '', title: '', resident: '', status: 'pendente', location: '', notes: '', responsible: '' });
@@ -742,10 +754,26 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
         );
     };
 
-    const renderEditField = (label: string, value: string, onChangeText: (text: string) => void, multiline = false) => (
+    const renderEditField = (
+        label: string, 
+        value: string, 
+        onChangeText: (text: string) => void, 
+        multiline = false, 
+        required = false, 
+        keyboardType: 'default' | 'numeric' = 'default'
+    ) => (
         <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>{label}</Text>
-            <TextInput style={[styles.fieldInput, multiline && styles.fieldInputMultiline]} value={value} onChangeText={onChangeText} multiline={multiline} />
+            <Text style={styles.fieldLabel}>
+                {label}
+                {required && <Text style={{ color: '#EF4444' }}> *</Text>}
+            </Text>
+            <TextInput 
+                style={[styles.fieldInput, multiline && styles.fieldInputMultiline]} 
+                value={value} 
+                onChangeText={onChangeText} 
+                multiline={multiline} 
+                keyboardType={keyboardType}
+            />
         </View>
     );
 
@@ -875,16 +903,20 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
         return (
             <View style={styles.container}>
                 <View style={[styles.header, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 52, paddingBottom: 20 }]}>
-                    <TouchableOpacity onPress={isCreating ? resetToList : () => setViewMode('detalhe')} style={styles.backBtn}>
+                    <TouchableOpacity onPress={isCreating ? resetToList : () => setViewMode('detalhe')} style={styles.backBtn} disabled={loadingActivities}>
                         <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
                     </TouchableOpacity>
                     <Text style={[styles.headerTitle, { flex: 1, textAlign: 'center', marginHorizontal: 8 }]}>{isCreating ? 'Nova Atividade' : 'Editar'}</Text>
-                    <TouchableOpacity onPress={isCreating ? saveNewActivity : saveEditing} style={styles.saveBtn}>
-                        <Text style={styles.saveBtnText}>Salvar</Text>
+                    <TouchableOpacity onPress={isCreating ? saveNewActivity : saveEditing} style={styles.saveBtn} disabled={loadingActivities}>
+                        {loadingActivities ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                            <Text style={styles.saveBtnText}>Salvar</Text>
+                        )}
                     </TouchableOpacity>
                 </View>
-                <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
-                    {renderEditField('Título', draftActivity.title, t => setDraftActivity(p => p ? { ...p, title: t } : p))}
+                <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} scrollEnabled={!loadingActivities}>
+                    {renderEditField('Título', draftActivity.title, t => setDraftActivity(p => p ? { ...p, title: t } : p), false, true)}
                     
                     {/* Seleção Múltipla de Residentes */}
                     <View style={styles.fieldGroup}>
@@ -941,7 +973,7 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                         )}
                     </View>
 
-                    {renderEditField('Horário', draftActivity.time, t => setDraftActivity(p => p ? { ...p, time: t } : p))}
+                    {renderEditField('Horário', draftActivity.time, handleTimeChange, false, true, 'numeric')}
                     {renderEditField('Local', draftActivity.location, t => setDraftActivity(p => p ? { ...p, location: t } : p))}
                     {renderEditField('Responsável', draftActivity.responsible, t => setDraftActivity(p => p ? { ...p, responsible: t } : p))}
                     {renderEditField('Observações', draftActivity.notes, t => setDraftActivity(p => p ? { ...p, notes: t } : p), true)}
@@ -986,6 +1018,24 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                     )}
                     <View style={{ height: 40 }} />
                 </ScrollView>
+                {loadingActivities && (
+                    <View style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: 999
+                    }}>
+                        <ActivityIndicator size="large" color="#202c4b" />
+                        <Text style={{ marginTop: 12, color: '#202c4b', fontSize: 15, fontWeight: '600' }}>
+                            {isCreating ? 'Criando atividade...' : 'Salvando alterações...'}
+                        </Text>
+                    </View>
+                )}
             </View>
         );
     }
