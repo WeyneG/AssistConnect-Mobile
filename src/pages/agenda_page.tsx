@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    TextInput, ScrollView, Modal, ActivityIndicator, Alert
+    TextInput, ScrollView, Modal, ActivityIndicator, Alert,
+    RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -322,6 +323,23 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
     const [selectedActivityId, setSelectedActivityId] = useState<number | null>(null);
     const [activities, setActivities] = useState<Activity[]>([]);
     const [draftActivity, setDraftActivity] = useState<Activity | null>(null);
+
+    const [refreshing, setRefreshing] = useState(false);
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        try {
+            if (activeTab === 'atividades') {
+                await carregarAtividadesAgenda(selectedDate);
+            } else if (activeTab === 'cardapio') {
+                await carregarCardapio(selectedDate);
+            }
+        } catch (err) {
+            console.error('[Agenda] Erro ao recarregar dados:', err);
+        } finally {
+            setRefreshing(false);
+        }
+    };
 
     const [idosos, setIdosos] = useState<Idoso[]>([]);
     const [selectedIdosoIds, setSelectedIdosoIds] = useState<number[]>([]);
@@ -1305,7 +1323,12 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
 
 
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView 
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#202c4b']} tintColor="#202c4b" />
+                }
+            >
                 {/* Navegação de datas (compartilhada) */}
                 <View style={styles.dateNav}>
                     <TouchableOpacity onPress={() => setSelectedDate(d => shiftDate(d, -1))} style={styles.dateNavBtn}>

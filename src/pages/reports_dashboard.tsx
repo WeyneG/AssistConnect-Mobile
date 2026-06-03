@@ -8,6 +8,7 @@ import {
     ActivityIndicator,
     Alert,
     Modal,
+    RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -488,6 +489,22 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
     const [selectedResident, setSelectedResident] = useState<Idoso | null>(TODOS_OS_RESIDENTES);
     const [idosos, setIdosos] = useState<Idoso[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const [refreshing, setRefreshing] = useState(false);
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        try {
+            await carregarIdosos();
+            if (selectedResident) {
+                await carregarDadosRelatorio(selectedResident, selectedReport);
+            }
+        } catch (err) {
+            console.error('[ReportsDashboard] Erro ao recarregar dados:', err);
+        } finally {
+            setRefreshing(false);
+        }
+    };
     const [showResidentDropdown, setShowResidentDropdown] = useState(false);
     const [dateFrom, setDateFrom] = useState(() => {
         const today = new Date();
@@ -1026,6 +1043,9 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ token, onNav
                 style={styles.content}
                 contentContainerStyle={styles.contentPadding}
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#202c4b']} tintColor="#202c4b" />
+                }
             >
                 <View>
                     {/* Filtros */}

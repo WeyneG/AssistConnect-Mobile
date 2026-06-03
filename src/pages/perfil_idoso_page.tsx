@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, ScrollView,
     TouchableOpacity, ActivityIndicator, Alert, Image,
-    Dimensions, SafeAreaView, Modal, TextInput
+    Dimensions, SafeAreaView, Modal, TextInput, RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -57,6 +57,23 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, userRo
     const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
     const [atividades, setAtividades] = useState<Atividade[]>([]);
     const [loadingSecoes, setLoadingSecoes] = useState(false);
+
+    const [refreshing, setRefreshing] = useState(false);
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        try {
+            await Promise.all([
+                carregarIdoso(),
+                carregarMedicamentos(),
+                carregarAtividades()
+            ]);
+        } catch (err) {
+            console.error('[PerfilIdoso] Erro ao recarregar dados:', err);
+        } finally {
+            setRefreshing(false);
+        }
+    };
 
     // Modais e formulários de Edição
     // 1. Ficha
@@ -497,7 +514,13 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, userRo
                 <View style={{ width: 40 }} />
             </View>
 
-            <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+            <ScrollView 
+                style={styles.scroll} 
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#202c4b']} tintColor="#202c4b" />
+                }
+            >
                 {/* Card Principal */}
                 <View style={styles.mainCard}>
                     <View style={styles.avatarWrapper}>
