@@ -53,7 +53,7 @@ export const ElderlyListScreen: React.FC<ElderlyListProps> = ({ token, userRole,
 
     // Paginação
     const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize] = useState(5);
+    const [pageSize] = useState(100);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
 
