@@ -43,12 +43,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onForg
       if (result.token) {
         onLoginSuccess(result.token, result.role || 'funcionario');
       } else {
-        Alert.alert('Erro', 'Email ou senha inválidos');
+        Alert.alert('Erro', 'E-mail e/ou senha incorreto(s)');
       }
 
     } catch (error) {
       setIsLoading(false);
-      Alert.alert('Erro', 'Não foi possível conectar ao servidor');
+      const msg = error instanceof Error && error.message === 'E-mail e/ou senha incorreto(s)'
+        ? 'E-mail e/ou senha incorreto(s)'
+        : 'Não foi possível conectar ao servidor';
+      Alert.alert('Erro', msg);
     }
   };
 

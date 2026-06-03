@@ -72,7 +72,12 @@ export const login = async (email: string, password: string) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
     });
-    if (!response.ok) throw new Error('Falha no login');
+    if (!response.ok) {
+        if (response.status === 400 || response.status === 401) {
+            throw new Error('E-mail e/ou senha incorreto(s)');
+        }
+        throw new Error('Falha no login');
+    }
     return await response.json();
 };
 
