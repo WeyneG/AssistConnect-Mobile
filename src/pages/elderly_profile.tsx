@@ -306,12 +306,12 @@ export const ElderlyProfileScreen: React.FC<ElderlyProfileProps> = ({ idosoId, t
                             </View>
                         </View>
 
-                        {/* Seção de Contato - Sprint 03 */}
+                        {/* Seção Responsável */}
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Contato de Emergência</Text>
+                            <Text style={styles.sectionTitle}>Responsável</Text>
                             <View style={styles.card}>
                                 <View style={styles.cardItem}>
-                                    <Ionicons name="call" size={20} color="#202c4b" />
+                                    <Ionicons name="person" size={20} color="#202c4b" />
                                     <View style={styles.cardText}>
                                         <Text style={styles.label}>Responsável</Text>
                                         <Text style={styles.value}>{idoso?.responsavelNome || 'Não cadastrado'}</Text>

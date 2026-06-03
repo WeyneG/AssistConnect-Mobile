@@ -595,13 +595,13 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, userRo
                             </View>
                         </View>
 
-                        {/* Seção Contato de Emergência */}
+                        {/* Seção Responsável */}
                         <View style={[styles.sectionCard, { marginTop: 14 }]}>
                             <View style={styles.sectionHeader}>
                                 <View style={[styles.iconCircle, { backgroundColor: '#10B981' }]}>
-                                    <Ionicons name="call" size={16} color="#FFF" />
+                                    <Ionicons name="person" size={16} color="#FFF" />
                                 </View>
-                                <Text style={styles.sectionTitle}>Contato de Emergência</Text>
+                                <Text style={styles.sectionTitle}>Responsável</Text>
                             </View>
 
                             <View style={styles.medicalContent}>
@@ -622,14 +622,6 @@ export const PerfilIdosoPage: React.FC<{ idosoId: number, token?: string, userRo
                             >
                                 <Ionicons name="create-outline" size={20} color="#FFF" />
                                 <Text style={styles.emergencyButtonText}>Editar Ficha Médica</Text>
-                            </TouchableOpacity>
-                        )}
-
-                        {/* Botão de Emergência */}
-                        {isAllowedToEdit && (
-                            <TouchableOpacity style={[styles.emergencyButton, { marginTop: 12 }]} activeOpacity={0.8}>
-                                <Ionicons name="warning" size={20} color="#FFF" />
-                                <Text style={styles.emergencyButtonText}>Registrar Ocorrência</Text>
                             </TouchableOpacity>
                         )}
                     </View>
