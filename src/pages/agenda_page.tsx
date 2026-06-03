@@ -558,7 +558,19 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
     };
 
     const saveNewActivity = async () => {
-        if (!draftActivity || !draftActivity.title.trim()) return;
+        if (!draftActivity || !draftActivity.title.trim()) {
+            Alert.alert('Atenção', 'O título da atividade é obrigatório.');
+            return;
+        }
+        if (!draftActivity.time || !draftActivity.time.trim()) {
+            Alert.alert('Atenção', 'O horário da atividade é obrigatório.');
+            return;
+        }
+        const timeRegex = /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(draftActivity.time.trim())) {
+            Alert.alert('Atenção', 'Insira um horário válido no formato HH:MM (ex.: 08:30 ou 14:00).');
+            return;
+        }
         if (selectedIdosoIds.length === 0) {
             Alert.alert('Atenção', 'Selecione pelo menos um residente para vincular à atividade.');
             return;
@@ -575,12 +587,15 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
             const selecionouTodos = idosos.length > 0 && selectedIdosoIds.length === idosos.length;
             const residentLabel = selecionouTodos ? 'Todos os Residentes' : (nomes || 'Residentes (Geral)');
 
+            const cleanTime = draftActivity.time.trim();
+            const startHour = cleanTime.split(':')[0];
+
             if (token && token !== 'demo-token') {
                 const apiPayload = {
                     nome: draftActivity.title,
                     data: draftActivity.date,
-                    horario_inicio: `${draftActivity.time}:00`,
-                    horario_fim: `${parseInt(draftActivity.time.split(':')[0]) + 1}:00:00`,
+                    horario_inicio: `${cleanTime}:00`,
+                    horario_fim: `${String(parseInt(startHour) + 1).padStart(2, '0')}:00:00`,
                     observacoes: draftActivity.notes,
                     responsavelId: 2,
                     status: draftActivity.status
@@ -588,7 +603,7 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                 await criarAtividade(apiPayload, selectedIdosoIds, token);
             }
             const newId = activities.length > 0 ? Math.max(...activities.map(a => a.id)) + 1 : 1;
-            setActivities(prev => [...prev, { ...draftActivity, id: newId, resident: residentLabel }]);
+            setActivities(prev => [...prev, { ...draftActivity, id: newId, time: cleanTime, resident: residentLabel }]);
             resetToList();
             Alert.alert('Sucesso', 'Atividade criada com sucesso!');
         } catch (err) {
@@ -616,6 +631,19 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
 
     const saveEditing = async () => {
         if (!draftActivity) return;
+        if (!draftActivity.title.trim()) {
+            Alert.alert('Atenção', 'O título da atividade é obrigatório.');
+            return;
+        }
+        if (!draftActivity.time || !draftActivity.time.trim()) {
+            Alert.alert('Atenção', 'O horário da atividade é obrigatório.');
+            return;
+        }
+        const timeRegex = /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(draftActivity.time.trim())) {
+            Alert.alert('Atenção', 'Insira um horário válido no formato HH:MM (ex.: 08:30 ou 14:00).');
+            return;
+        }
         if (selectedIdosoIds.length === 0) {
             Alert.alert('Atenção', 'Selecione pelo menos um residente.');
             return;
@@ -632,12 +660,15 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
             const selecionouTodos = idosos.length > 0 && selectedIdosoIds.length === idosos.length;
             const residentLabel = selecionouTodos ? 'Todos os Residentes' : (nomes || 'Residentes (Geral)');
 
+            const cleanTime = draftActivity.time.trim();
+            const startHour = cleanTime.split(':')[0];
+
             if (token && token !== 'demo-token') {
                 const apiPayload = {
                     nome: draftActivity.title,
                     data: draftActivity.date,
-                    horario_inicio: `${draftActivity.time}:00`,
-                    horario_fim: `${parseInt(draftActivity.time.split(':')[0]) + 1}:00:00`,
+                    horario_inicio: `${cleanTime}:00`,
+                    horario_fim: `${String(parseInt(startHour) + 1).padStart(2, '0')}:00:00`,
                     observacoes: draftActivity.notes,
                     responsavelId: 2,
                     status: draftActivity.status
@@ -758,6 +789,62 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                                 <Text style={styles.detailNotesText}>{selectedActivity.notes}</Text>
                             </View>
                         ) : null}
+
+                        {isAllowedToEdit && (
+                            <View style={{ marginTop: 20 }}>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
+                                    Atualização Rápida de Status
+                                </Text>
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                                    {(Object.keys(statusMeta) as ActivityStatus[]).map(s => {
+                                        const meta = statusMeta[s];
+                                        const active = selectedActivity.status === s;
+                                        return (
+                                            <TouchableOpacity 
+                                                key={s} 
+                                                style={{ 
+                                                    paddingHorizontal: 10, 
+                                                    paddingVertical: 6, 
+                                                    borderRadius: 12, 
+                                                    borderWidth: 1, 
+                                                    borderColor: active ? meta.color : '#E5E7EB',
+                                                    backgroundColor: active ? meta.backgroundColor : '#FFF'
+                                                }}
+                                                onPress={async () => {
+                                                    try {
+                                                        setLoadingActivities(true);
+                                                        const cleanTime = selectedActivity.time.trim();
+                                                        const startHour = cleanTime.split(':')[0];
+                                                        const apiPayload = {
+                                                            nome: selectedActivity.title,
+                                                            data: selectedActivity.date,
+                                                            horario_inicio: `${cleanTime}:00`,
+                                                            horario_fim: `${String(parseInt(startHour) + 1).padStart(2, '0')}:00:00`,
+                                                            observacoes: selectedActivity.notes,
+                                                            responsavelId: 2,
+                                                            status: s
+                                                        };
+                                                        if (token && token !== 'demo-token') {
+                                                            await atualizarAtividade(selectedActivity.id, apiPayload, token);
+                                                        }
+                                                        setActivities(prev => prev.map(a => a.id === selectedActivity.id ? { ...a, status: s } : a));
+                                                        Alert.alert('Sucesso', `Status atualizado para: ${meta.label}`);
+                                                    } catch (err) {
+                                                        Alert.alert('Erro', 'Não foi possível atualizar o status.');
+                                                    } finally {
+                                                        setLoadingActivities(false);
+                                                    }
+                                                }}
+                                            >
+                                                <Text style={{ fontSize: 11, fontWeight: '700', color: active ? meta.color : '#6B7280' }}>
+                                                    {meta.label}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </View>
+                            </View>
+                        )}
                     </View>
                 </ScrollView>
             </View>
