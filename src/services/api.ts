@@ -899,7 +899,7 @@ export const buscarAtividades = async (filtros?: FiltrosAtividade, token?: strin
 };
 
 export const criarAtividade = async (
-    atividade: { nome: string; data: string; horario_inicio: string; horario_fim: string; observacoes: string; responsavelId: number; status?: string },
+    atividade: { nome: string; data: string; horario_inicio: string; horario_fim: string; observacoes: string; responsavelId: number; responsavelNome?: string; status?: string },
     idosoIds?: number[] | number,
     token?: string
 ): Promise<any> => {
@@ -977,7 +977,7 @@ export const atualizarAlocacoesAtividade = async (
 
 export const atualizarAtividade = async (
     id: number,
-    atividade: { nome: string; data: string; horario_inicio: string; horario_fim: string; observacoes: string; responsavelId: number; status?: string },
+    atividade: { nome: string; data: string; horario_inicio: string; horario_fim: string; observacoes: string; responsavelId: number; responsavelNome?: string; status?: string },
     token?: string
 ): Promise<any> => {
     const headers: any = { 'Content-Type': 'application/json' };

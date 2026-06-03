@@ -19,7 +19,9 @@ import {
     buscarIdosos,
     buscarIdososDaAtividade,
     atualizarAlocacoesAtividade,
-    Idoso
+    Idoso,
+    buscarUsuarios,
+    UsuarioResponse
 } from '../services/api';
 
 type Periodo = 'manhã' | 'tarde' | 'noite';
@@ -343,8 +345,9 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
 
     const [idosos, setIdosos] = useState<Idoso[]>([]);
     const [selectedIdosoIds, setSelectedIdosoIds] = useState<number[]>([]);
+    const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([]);
 
-    // Carregar lista de residentes ativos
+    // Carregar lista de residentes ativos e funcionários
     useEffect(() => {
         const carregarIdosos = async () => {
             try {
@@ -354,7 +357,16 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                 console.warn('[Agenda] Erro ao buscar idosos:', err);
             }
         };
+        const carregarUsuarios = async () => {
+            try {
+                const data = await buscarUsuarios(token);
+                setUsuarios(data || []);
+            } catch (err) {
+                console.warn('[Agenda] Erro ao buscar usuários:', err);
+            }
+        };
         carregarIdosos();
+        carregarUsuarios();
     }, [token]);
 
     // Estados de Integração
@@ -620,6 +632,14 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
             const cleanTime = draftActivity.time.trim();
             const startHour = cleanTime.split(':')[0];
 
+            const matchingUser = usuarios.find(
+                u => (u.name || u.nome || '').trim().toLowerCase() === (draftActivity.responsible || '').trim().toLowerCase()
+            );
+            const firstFuncionario = usuarios.find(
+                u => (u.role || '').toLowerCase() === 'funcionario' || (u.role || '').toLowerCase() === 'admin'
+            );
+            const targetId = matchingUser ? matchingUser.id : (firstFuncionario ? firstFuncionario.id : 2);
+
             if (token && token !== 'demo-token') {
                 const apiPayload = {
                     nome: draftActivity.title,
@@ -627,7 +647,8 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                     horario_inicio: `${cleanTime}:00`,
                     horario_fim: `${String(parseInt(startHour) + 1).padStart(2, '0')}:00:00`,
                     observacoes: draftActivity.notes,
-                    responsavelId: 2,
+                    responsavelId: targetId,
+                    responsavelNome: (draftActivity.responsible || '').trim(),
                     status: draftActivity.status
                 };
                 await criarAtividade(apiPayload, selectedIdosoIds, token);
@@ -693,6 +714,14 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
             const cleanTime = draftActivity.time.trim();
             const startHour = cleanTime.split(':')[0];
 
+            const matchingUser = usuarios.find(
+                u => (u.name || u.nome || '').trim().toLowerCase() === (draftActivity.responsible || '').trim().toLowerCase()
+            );
+            const firstFuncionario = usuarios.find(
+                u => (u.role || '').toLowerCase() === 'funcionario' || (u.role || '').toLowerCase() === 'admin'
+            );
+            const targetId = matchingUser ? matchingUser.id : (firstFuncionario ? firstFuncionario.id : 2);
+
             if (token && token !== 'demo-token') {
                 const apiPayload = {
                     nome: draftActivity.title,
@@ -700,7 +729,8 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                     horario_inicio: `${cleanTime}:00`,
                     horario_fim: `${String(parseInt(startHour) + 1).padStart(2, '0')}:00:00`,
                     observacoes: draftActivity.notes,
-                    responsavelId: 2,
+                    responsavelId: targetId,
+                    responsavelNome: (draftActivity.responsible || '').trim(),
                     status: draftActivity.status
                 };
                 await atualizarAtividade(draftActivity.id, apiPayload, token);
@@ -861,13 +891,22 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({ initialTab = 'atividades
                                                         setLoadingActivities(true);
                                                         const cleanTime = selectedActivity.time.trim();
                                                         const startHour = cleanTime.split(':')[0];
+                                                        const matchingUser = usuarios.find(
+                                                            u => (u.name || u.nome || '').trim().toLowerCase() === (selectedActivity.responsible || '').trim().toLowerCase()
+                                                        );
+                                                        const firstFuncionario = usuarios.find(
+                                                            u => (u.role || '').toLowerCase() === 'funcionario' || (u.role || '').toLowerCase() === 'admin'
+                                                        );
+                                                        const targetId = matchingUser ? matchingUser.id : (firstFuncionario ? firstFuncionario.id : 2);
+
                                                         const apiPayload = {
                                                             nome: selectedActivity.title,
                                                             data: selectedActivity.date,
                                                             horario_inicio: `${cleanTime}:00`,
                                                             horario_fim: `${String(parseInt(startHour) + 1).padStart(2, '0')}:00:00`,
                                                             observacoes: selectedActivity.notes,
-                                                            responsavelId: 2,
+                                                            responsavelId: targetId,
+                                                            responsavelNome: selectedActivity.responsible,
                                                             status: s
                                                         };
                                                         if (token && token !== 'demo-token') {
